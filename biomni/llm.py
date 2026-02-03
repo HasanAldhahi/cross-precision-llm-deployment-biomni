@@ -35,7 +35,7 @@ def get_llm(
     # Use config values for any unspecified parameters
     if config is not None:
         if model is None:
-            model = config.llm_model
+            model = config.llm  
         if temperature is None:
             temperature = config.temperature
         if source is None:
@@ -151,7 +151,7 @@ def get_llm(
         return ChatOpenAI(
             model=model,
             temperature=temperature,
-            api_key=os.getenv("GEMINI_API_KEY"),
+            api_key=api_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             stop_sequences=stop_sequences,
         )

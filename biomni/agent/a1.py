@@ -64,6 +64,7 @@ class A1:
         api_key: str | None = None,
         commercial_mode: bool | None = None,
         expected_data_lake_files: list | None = None,
+        model_name: str | None = None,
     ):
         """Initialize the biomni agent.
 
@@ -2456,3 +2457,24 @@ Each library is listed with its description to help you understand its functiona
             wrapper.__signature__ = inspect.Signature(new_params, return_annotation=dict)
 
             return wrapper
+
+    def get_trajectory(self):
+        """
+        Retrieves the full execution trajectory from the last run.
+        Designed for external evaluators (like BiomniR0Evaluator) to capture
+        thoughts, code execution, and environment feedback.
+        
+        Returns:
+            List of message objects or log entries from the last execution.
+        """
+        # 1. Try getting messages from the LangGraph checkpoint state
+        if hasattr(self, "_conversation_state") and self._conversation_state:
+            messages = self._conversation_state.get("messages", [])
+            if messages:
+                return messages
+        
+        # 2. Fallback to internal log if state is missing
+        if hasattr(self, "log") and self.log:
+            return self.log
+            
+        return []

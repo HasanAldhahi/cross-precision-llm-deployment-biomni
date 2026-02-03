@@ -150,21 +150,24 @@ install_cli_tools() {
 
 # Main installation process
 main() {
+    # Define the conda environment prefix
+    CONDA_PREFIX_PATH="/projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni"
+    
     # Step 1: Create base conda environment
-    echo -e "\n${YELLOW}Step 1: Creating base environment from environment.yml...${NC}"
-    conda env create -n biomni_e1 -f environment.yml
+    echo -e "\n${YELLOW}Step 1: Creating base environment at $CONDA_PREFIX_PATH from environment.yml...${NC}"
+    conda env create --prefix "$CONDA_PREFIX_PATH" -f environment.yml
     handle_error $? "Failed to create base conda environment."
 
     # Step 2: Activate the environment
     echo -e "\n${YELLOW}Step 2: Activating conda environment...${NC}"
     if command -v micromamba &> /dev/null; then
         eval "$("$MAMBA_EXE" shell hook --shell bash)"
-        micromamba activate biomni_e1
+        micromamba activate "$CONDA_PREFIX_PATH"
     else
         eval "$(conda shell.bash hook)"
-        conda activate biomni_e1
+        conda activate "$CONDA_PREFIX_PATH"
     fi
-    handle_error $? "Failed to activate biomni_e1 environment."
+    handle_error $? "Failed to activate conda environment at $CONDA_PREFIX_PATH."
 
     # Step 3: Install core bioinformatics tools (including QIIME2)
     echo -e "\n${YELLOW}Step 3: Installing core bioinformatics tools (including QIIME2)...${NC}"
@@ -186,7 +189,7 @@ main() {
     # Setup completed
     echo -e "\n${GREEN}=== Biomni Environment Setup Completed! ===${NC}"
     echo -e "You can now run the example analysis with: ${YELLOW}python bio_analysis_example.py${NC}"
-    echo -e "To activate this environment in the future, run: ${YELLOW}conda activate biomni_e1${NC}"
+    echo -e "To activate this environment in the future, run: ${YELLOW}conda activate $CONDA_PREFIX_PATH${NC}"
     echo -e "To use BioAgentOS, navigate to the BioAgentOS directory and follow the instructions in the README."
 
     # Display CLI tools setup instructions

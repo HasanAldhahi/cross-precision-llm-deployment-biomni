@@ -65,11 +65,11 @@ IMPORTANT GUIDELINES:
 7. Don't exclude resources just because they're not explicitly mentioned in the query
 8. When in doubt about a database tool or molecular biology tool, include it rather than exclude it
 """
-
+        print(f"this is the llm used for retrieval: {llm}")
         # Use the provided LLM or create a new one
         if llm is None:
             llm = ChatOpenAI(model="gpt-4o")
-
+   
         # Invoke the LLM
         if hasattr(llm, "invoke"):
             # For LangChain-style LLMs
@@ -78,8 +78,16 @@ IMPORTANT GUIDELINES:
         else:
             # For other LLM interfaces
             response_content = str(llm(prompt))
+            
+            
+        print(f"✓ Retriever LLM responded (length: {len(response_content)} chars)")
 
         # Parse the response to extract the selected indices
+ 
+        
+        print(f"Response content: {response_content}")
+        # Parse the response to extract the selected indices
+        print(f"🔍 Parsing retriever response...")
         selected_indices = self._parse_llm_response(response_content)
 
         # Get the selected resources

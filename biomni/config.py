@@ -6,7 +6,7 @@ Maintains full backward compatibility with existing code.
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -49,6 +49,9 @@ class BiomniConfig:
     # LLM source (auto-detected if None)
     source: str | None = None
 
+    # Proxy settings (auto-detected from environment)
+    proxies: dict = field(default_factory=dict)
+
     def __post_init__(self):
         """Load any environment variable overrides if they exist."""
         # Check for environment variable overrides (optional)
@@ -72,6 +75,19 @@ class BiomniConfig:
         if os.getenv("BIOMNI_SOURCE"):
             self.source = os.getenv("BIOMNI_SOURCE")
 
+        # Auto-detect proxy settings from environment
+        http_proxy = os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+        https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
+
+        if http_proxy:
+            self.proxies["http"] = http_proxy
+        if https_proxy:
+            self.proxies["https"] = https_proxy
+
+        # Print detected proxies when they exist
+        if self.proxies:
+            print(f"✓ BiomniConfig: Auto-detected proxy settings: {self.proxies}")
+
     def to_dict(self) -> dict:
         """Convert config to dictionary for easy access."""
         return {
@@ -84,6 +100,7 @@ class BiomniConfig:
             "base_url": self.base_url,
             "api_key": self.api_key,
             "source": self.source,
+            "proxies": self.proxies,
         }
 
 

@@ -53,8 +53,20 @@ def _query_llm_for_api(prompt, schema, system_template):
     try:
         from biomni.config import default_config
 
-        model = default_config.llm
+        model = default_config.llm[0] if isinstance(default_config.llm, tuple) else default_config.llm
         api_key = default_config.api_key
+        # print(f"Model: {model}")
+        # print(f"Apikey: {api_key}")
+        source = default_config.source
+        # print(f"Source: {source}")
+        base_url = default_config.base_url[0] if isinstance(default_config.base_url, tuple) else default_config.base_url
+        # print(f"Base URL: {base_url}")
+        # if isinstance(default_config, tuple):
+        #     print(f"Default config is a tuple")
+        #     print(f"Default config: {default_config}")
+          
+       
+        
     except ImportError:
         model = "claude-3-5-haiku-20241022"
         api_key = None
@@ -71,10 +83,17 @@ def _query_llm_for_api(prompt, schema, system_template):
         try:
             from biomni.config import default_config
 
-            llm = get_llm(model=model, temperature=0.0, api_key=api_key, config=default_config)
+            llm = get_llm(
+                model=model, 
+                temperature=0.0, 
+                api_key=api_key if api_key is not None else "EMPTY",  # Add fallback
+                source=source, 
+                base_url=base_url, 
+                config=default_config
+            )
         except ImportError:
-            llm = get_llm(model=model, temperature=0.0, api_key=api_key or "EMPTY")
-
+            llm = get_llm(model=model, temperature=0.0, base_url=base_url , api_key=api_key or "EMPTY")
+        print("LLM instance created")
         # Compose messages
         messages = [
             SystemMessage(content=system_prompt),
@@ -83,16 +102,19 @@ def _query_llm_for_api(prompt, schema, system_template):
 
         # Query the LLM
         response = llm.invoke(messages)
+        print("model was invoked, response was received")
         llm_text = response.content.strip()
-
+        print(f"llm_text: {llm_text}")
         # Find JSON boundaries (in case LLM adds explanations)
         json_start = llm_text.find("{")
         json_end = llm_text.rfind("}") + 1
-
+        print(f"json_start: {json_start}")
+        print(f"json_end: {json_end}")
         if json_start >= 0 and json_end > json_start:
             json_text = llm_text[json_start:json_end]
             result = json.loads(json_text)
         else:
+            print(f"No JSON found, trying the whole response")
             # If no JSON found, try the whole response
             result = json.loads(llm_text)
 
@@ -132,15 +154,30 @@ def _query_rest_api(endpoint, method="GET", params=None, headers=None, json_data
     # Set default description if not provided
     if description is None:
         description = f"{method} request to {endpoint}"
+        
+    # --- START OF MODIFICATION ---
+
+    # 1. Automatically detect proxy settings from environment variables.
+    #    This is read from the environment set by your SLURM script.
+    proxies = {
+        "http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"),
+        "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY"),
+    }
+    # Clean up the dictionary to remove empty entries
+    proxies = {k: v for k, v in proxies.items() if v}
+    # if proxies:
+    #     print(f"DEBUG: Using proxies for request: {proxies}")
+
+    # --- END OF MODIFICATION ---
 
     url_error = None
 
     try:
         # Make the API request
         if method.upper() == "GET":
-            response = requests.get(endpoint, params=params, headers=headers)
+            response = requests.get(endpoint, params=params,proxies=proxies, headers=headers)
         elif method.upper() == "POST":
-            response = requests.post(endpoint, params=params, headers=headers, json=json_data)
+            response = requests.post(endpoint, params=params,proxies=proxies, headers=headers, json=json_data)
         else:
             return {"error": f"Unsupported HTTP method: {method}"}
 

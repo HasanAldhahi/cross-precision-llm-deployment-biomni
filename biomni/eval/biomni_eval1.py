@@ -20,15 +20,17 @@ class BiomniEval1:
         score = evaluator.evaluate('gwas_causal_gene_opentargets', 0, 'BRCA1')
     """
 
-    def __init__(self):
+    def __init__(self, dataset_path: str = None):
         """
         Initialize the BiomniEval1 evaluator
 
         Args:
-            dataset_path: Path to the merged dataset parquet file
+            dataset_path: Path to the merged dataset parquet file. If None, loads from HuggingFace
         """
-
-        self.df = pd.read_parquet("hf://datasets/biomni/Eval1/biomni_eval1_dataset.parquet")
+        if dataset_path is None:
+            dataset_path = "hf://datasets/biomni/Eval1/biomni_eval1_dataset.parquet"
+        
+        self.df = pd.read_parquet(dataset_path)
 
         # Create index mapping for fast lookup using task_instance_id
         self.instance_map = {}

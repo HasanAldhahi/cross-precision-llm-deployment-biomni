@@ -4,7 +4,7 @@ from Bio import Entrez
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
-Entrez.email = os.getenv("NCBI_EMAIL") or "YOUR_EMAIL"
+Entrez.email = os.getenv("NCBI_EMAIL") 
 mcp = FastMCP("pubmed-live")
 
 
