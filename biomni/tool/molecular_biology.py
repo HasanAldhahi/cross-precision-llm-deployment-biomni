@@ -249,7 +249,7 @@ def annotate_plasmid(sequence: str, is_circular: bool = True) -> dict[str, Any]:
         return None
 
 
-def get_gene_coding_sequence(gene_name: str, organism: str, email: str = None) -> list[dict[str, str]]:
+def get_gene_coding_sequence(gene_name: str, organism: str, email: str = "hasan.aldhahi@stud.uni-goettingen.de") -> list[dict[str, str]]:
     """Retrieves the coding sequence(s) of a specified gene from NCBI Entrez.
 
     Args:
@@ -263,8 +263,12 @@ def get_gene_coding_sequence(gene_name: str, organism: str, email: str = None) -
             - sequence: Coding sequence of the gene
 
     """
-    if email:
-        Entrez.email = email
+    Entrez.api_key = os.getenv("NCBI_API_KEY") or os.getenv("ENTREZ_API_KEY")
+    if not Entrez.api_key:
+        raise ValueError("NCBI_API_KEY or ENTREZ_API_KEY environment variable must be set")
+    Entrez.email = email
+    
+    print(f"Email: {email}")
 
     def search_gene() -> str:
         """Search for gene ID in NCBI database."""
