@@ -16,6 +16,10 @@ brain_surgery/qwen_bf16_robust/*
 # LORAs
 brain_surgery/lora_extraction_results/*
 
+
+#
+Ignore/*
+
 # SFT
 SFT/*
 
