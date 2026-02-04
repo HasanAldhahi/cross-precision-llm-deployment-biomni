@@ -1,0 +1,11 @@
+# Annotation Pipeline Requirements
+# Required packages for running the annotation pipeline scripts
+
+# OpenAI API client for ChatAI evaluation
+openai
+
+# Environment variable management
+python-dotenv
+
+# Token counting (optional but recommended for accurate token statistics)
+tiktoken

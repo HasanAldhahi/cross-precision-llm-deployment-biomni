@@ -1,0 +1,11 @@
+# Visualization Requirements
+# Required packages for running visualization scripts (bar_chart.py, heatmap.py, chart.py)
+
+# Data visualization and plotting
+matplotlib
+
+# Numerical computing
+numpy
+
+# Statistical data visualization
+seaborn
