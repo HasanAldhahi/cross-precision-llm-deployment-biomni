@@ -1,0 +1,43 @@
+================================================================================
+JobID = 12003773
+User = u17285, Account = kisski-narges-llm-interactive
+Partition = kisski-h100, Nodelist = ggpu245
+================================================================================
+===============================================
+GPTQ Evaluation Client
+Node: ggpu245
+Job ID: 12003773
+===============================================
+
+Starting AWQ evaluation...
+🔍 Checking hardware...
+✅ Found 4 GPUs. CUDA Version: 12.8
+🚀 Loading Biomni BF16 from: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-Preview
+📂 Loading custom calibration data from: calibration_data.json
+   Loaded 123 samples.
+⚖️  Configuring AWQ INT4 Recipe (Group Size 128)...
+🧪 Running Calibration on 123 samples using 4 GPUs...
+   (This usually takes 10-20 minutes on GPUs)
+2025-12-12T19:45:20.714598+0100 | reset | INFO - Compression lifecycle reset
+2025-12-12T19:45:20.721569+0100 | _create_default_logger | INFO - Logging all LLM Compressor modifier-level logs to sparse_logs/12-12-2025_19.45.20.log
+2025-12-12T19:45:20.723687+0100 | from_modifiers | INFO - Creating recipe from modifiers
+2025-12-12T19:45:20.931040+0100 | on_initialize | INFO - No AWQModifier.mappings provided, inferring from model...
+2025-12-12T19:45:20.976852+0100 | initialize | INFO - Compression lifecycle initialized for 1 modifiers
+2025-12-12T19:45:20.977025+0100 | IndependentPipeline | INFO - Inferred `SequentialPipeline` for `AWQModifier`
+2025-12-12T23:21:40.341649+0100 | finalize | INFO - Compression lifecycle finalized for 1 modifiers
+2025-12-12T23:21:40.510960+0100 | post_process | WARNING - Optimized model is not saved. To save, please provide`output_dir` as input arg.Ex. `oneshot(..., output_dir=...)`
+💾 Saving High-Fidelity AWQ INT4 Model to: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-AWQ-INT4-CustomCalib
+2025-12-12T23:21:40.552504+0100 | get_model_compressor | INFO - skip_sparsity_compression_stats set to True. Skipping sparsity compression statistic calculations. No sparsity compressor will be applied.
+✅ Done.
+
+===============================================
+AWQ Evaluation Complete
+===============================================
+============ Job Information ===================================================
+Submitted: 2025-12-12T19:40:40
+Started: 2025-12-12T19:40:48
+Ended: 2025-12-12T23:26:43
+Elapsed: 226 min, Limit: 2880 min, Difference: 2654 min
+CPUs: 32, Nodes: 1
+Estimated Consumption: 3955.00 core-hours
+================================================================================

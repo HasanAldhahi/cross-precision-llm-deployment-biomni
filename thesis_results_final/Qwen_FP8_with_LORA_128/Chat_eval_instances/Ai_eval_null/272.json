@@ -1,0 +1,20 @@
+{
+  "instance_id": 272,
+  "chat_eval": null,
+  "answer": "{\"disease_name\": \"Arthrogryposis with oculomotor limitation and electroretinal anomalies\", \"OMIM_ID\": \"108145\"}",
+  "extracted_solution_or_last_step": "{'disease_name': 'Arthrogryposis, distal, type 5', 'OMIM_ID': '108145'}",
+  "error": null,
+  "last_200_tokens": "PIEZO2 2. The patient has the following phenotypes: - HP:0000508: Ptosis - HP:0001371: Flexion contracture - HP:0000602: Ophthalmoplegia - HP:0009473: Joint contracture of the hand 3. From the OMIM database, PIEZO2 is associated with several diseases: - Arthrogryposis, distal, type 5 (OMIM: 108145) - Autosomal dominant - Arthrogryposis, distal, with impaired proprioception and touch (OMIM: 617146) - Autosomal recessive - Arthrogryposis, distal, type 3 (OMIM: 114300) - Autosomal dominant - Marden-Walker syndrome (OMIM: 248700) - Autosomal dominant 4. From the literature search, I found that distal arthrogryposis type 5 is consistently associated with: - Ptosis - Ophthalmoplegia - Joint contractures - Flexion contractures The patient's phenotypes match perfectly with distal arthrogryposis type 5, which is caused by PIEZO2 mutations. The other PIEZO2-related diseases have different phenotypic features: - Marden-Walker syndrome involves developmental delay and intellectual disability - Arthrogryposis, distal, with impaired proprioception and touch involves sensory deficits - Arthrogryposis, distal, type 3 has a different clinical presentation The combination of ptosis, ophthalmoplegia, flexion contractures, and joint contractures of the hand is characteristic of distal arthrogryposis type 5. My diagnosis is: - Disease name: Arthrogryposis, distal, type 5 - OMIM ID: 108145</think> <solution> {'disease_name': 'Arthrogryposis, distal, type 5', 'OMIM_ID': '108145'} </solution>",
+  "answer_count_in_last_200_tokens": 0,
+  "potential_answer_with_has_is": null,
+  "potential_answer_final_answer": null,
+  "potential_answer_conclusion": null,
+  "potential_answer_emerges": null,
+  "count_potential_answer_with_has_is": 0,
+  "count_potential_answer_final_answer": 0,
+  "count_potential_answer_conclusion": 0,
+  "count_potential_answer_emerges": 0,
+  "prompt": "\nTask: given a patient's phenotypes and a list of candidate genes, diagnose the rare disease that the patient has.\nPhenotypes: HP:0000508, HP:0001371, HP:0000602, HP:0009473\nCandidate genes: ['ENSG00000154864']\n\nOutput format: {'disease_name': XXX, 'OMIM_ID': XXX}\n        ",
+  "task_name": "rare_disease_diagnosis",
+  "execution_time": 11018.708997488022
+}

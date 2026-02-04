@@ -1,0 +1,32 @@
+# Python dependencies for quantization study
+# Install with: pip install -r requirements.txt
+
+# Core dependencies (all methods use vLLM)
+vllm>=0.2.0
+transformers>=4.35.0
+torch>=2.0.0
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Quantization libraries
+llmcompressor[transformers]>=0.1.0  # Official vLLM tool for AWQ/GPTQ (replaces deprecated autoawq)
+optimum-quanto>=0.1.0               # For PTQ quantization (note: using vLLM runtime INT8 instead)
+# Note: llm-compressor is the official vLLM quantization tool
+# Note: llama-cpp-python NOT needed - all methods use vLLM now!
+
+# Server/client
+aiohttp>=3.8.0
+asyncio
+
+# Evaluation
+scipy>=1.10.0
+matplotlib>=3.7.0
+scikit-learn>=1.3.0
+
+# Multiprocessing & file locking
+filelock>=3.12.0
+
+# Utilities
+tqdm>=4.65.0
+
+

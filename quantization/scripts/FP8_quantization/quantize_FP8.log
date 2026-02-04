@@ -1,0 +1,30 @@
+================================================================================
+JobID = 11970348
+User = u17285, Account = kisski-narges-llm-interactive
+Partition = kisski-h100, Nodelist = ggpu239
+================================================================================
+===============================================
+GPTQ Evaluation Client
+Node: ggpu239
+Job ID: 11970348
+===============================================
+
+Starting GPTQ evaluation...
+🚀 Loading Biomni BF16 from: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-Preview
+📂 Loading custom calibration data from: calibration_data.json
+   Loaded 123 samples.
+   Avg Length (Chars): 77603
+⚖️  Configuring FP8 Recipe (Group Size 128)...
+🧪 Running Calibration on 123 samples (Truncated to 8192 tokens)...
+
+===============================================
+GPTQ Evaluation Complete
+===============================================
+============ Job Information ===================================================
+Submitted: 2025-12-09T13:17:34
+Started: 2025-12-09T17:58:35
+Ended: 2025-12-09T18:03:57
+Elapsed: 6 min, Limit: 720 min, Difference: 714 min
+CPUs: 64, Nodes: 1
+Estimated Consumption: 105.00 core-hours
+================================================================================

@@ -1,0 +1,20 @@
+{
+  "instance_id": 155,
+  "chat_eval": "0",
+  "answer": "ENSG00000170540",
+  "extracted_solution_or_last_step": "{\"causal_gene\": [causal_gene]} </execute>",
+  "error": null,
+  "last_200_tokens": "4. [ ] Select the gene with the highest number of matching HP terms as causal <execute> import pandas as pd from biomni.tool.database import query_monarch # Step 1: Convert Ensembl IDs to gene symbols gene_info_path = \"/projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni_Env/biomni_data/data_lake/gene_info.parquet\" gene_info = pd.read_parquet(gene_info_path) ensembl_to_symbol = dict(zip(gene_info['ensembl_gene_id'], gene_info['symbol'])) # Get gene symbols for candidates candidate_symbols = {gene: ensembl_to_symbol.get(gene, \"Unknown\") for gene in [ \"ENSG00000163873\", \"ENSG00000167114\", \"ENSG00000171105\", \"ENSG00000106692\", \"ENSG00000170927\", \"ENSG00000144381\", \"ENSG00000170540\", \"ENSG00000160710\", \"ENSG00000130702\", \"ENSG00000189221\", \"ENSG00000077235\", \"ENSG00000163794\", \"ENSG00000186472\", \"ENSG00000106344\", \"ENSG00000115339\", \"ENSG00000119537\" ]} # Step 2-3: Query Monarch API for each gene's HP terms and compare with patient's patient_phenotypes = [ \"HP:0002355\", \"HP:0005109\", \"HP:0007178\", \"HP:0010867\", \"HP:0001336\", \"HP:0003326\", \"HP:0001251\", \"HP:0000708\", \"HP:0012443\", \"HP:0001257\", \"HP:0010286\", \"HP:0001279\", \"HP:0025421\", \"HP:0001746\", \"HP:0010953\", \"HP:0011852\", \"HP:0031923\" ] causal_gene = None max_matches = 0 for ensembl, symbol in candidate_symbols.items(): if symbol == \"Unknown\": continue # Query Monarch for gene's associated HP terms results = query_monarch(prompt=f\"Phenotypes associated with {symbol}\", max_results=10) # Extract HP terms from results gene_phenotypes = [term for result in results for term in result.get(\"phenotype\", []) if term.startswith(\"HP:\")] # Count matches with patient's phenotypes matches = set(gene_phenotypes) & set(patient_phenotypes) if len(matches) > max_matches: max_matches = len(matches) causal_gene = ensembl # Step 4: Return the gene with the most matches if causal_gene: <solution> {\"causal_gene\": [causal_gene]} </execute></solution>",
+  "answer_count_in_last_200_tokens": 1,
+  "potential_answer_with_has_is": null,
+  "potential_answer_final_answer": null,
+  "potential_answer_conclusion": null,
+  "potential_answer_emerges": null,
+  "count_potential_answer_with_has_is": 0,
+  "count_potential_answer_final_answer": 0,
+  "count_potential_answer_conclusion": 0,
+  "count_potential_answer_emerges": 0,
+  "prompt": "\nTask: Given a patient's phenotypes and a list of candidate genes, identify the causal gene.\nPhenotypes: HP:0002355, HP:0005109, HP:0007178, HP:0010867, HP:0001336, HP:0003326, HP:0001251, HP:0000708, HP:0012443, HP:0001257, HP:0010286, HP:0001279, HP:0025421, HP:0001746, HP:0010953, HP:0011852, HP:0031923\nCandidate genes: ENSG00000163873, ENSG00000167114, ENSG00000171105, ENSG00000106692, ENSG00000170927, ENSG00000144381, ENSG00000170540, ENSG00000160710, ENSG00000130702, ENSG00000189221, ENSG00000077235, ENSG00000163794, ENSG00000186472, ENSG00000106344, ENSG00000115339, ENSG00000119537\n\nOutput format: {'causal_gene': [gene1]}\n        ",
+  "task_name": "patient_gene_detection",
+  "execution_time": 440.5539638996124
+}

@@ -1,0 +1,11 @@
+# Install Mergekit for extraction
+git+https://github.com/arcee-ai/mergekit.git
+
+# Install libraries for FP8 training and GRPO
+transformers 
+trl 
+peft 
+accelerate 
+bitsandbytes 
+datasets 
+torch

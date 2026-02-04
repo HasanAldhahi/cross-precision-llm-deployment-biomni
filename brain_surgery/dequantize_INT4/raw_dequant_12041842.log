@@ -1,0 +1,22 @@
+================================================================================
+JobID = 12041842
+User = u17285, Account = kisski-narges-llm-interactive
+Partition = kisski, Nodelist = ggpu171
+================================================================================
+------------------------------------------------
+STEP 1: Running Raw Dequantization (DeepSeek Style)...
+------------------------------------------------
+🚀 Starting Standard Dequantization (LLM-Compressor compatible)...
+   Input: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-AWQ-INT4-CustomCalib
+   Output: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-From-INT4-Bridge-BF16
+🧹 Migrating Configuration...
+✅ Conversion Complete.
+   You can now load this model in Method A/B scripts as a standard BF16 model.
+============ Job Information ===================================================
+Submitted: 2025-12-17T14:42:08
+Started: 2025-12-17T18:35:31
+Ended: 2025-12-17T18:42:25
+Elapsed: 7 min, Limit: 720 min, Difference: 713 min
+CPUs: 64, Nodes: 1
+Estimated Consumption: 70.00 core-hours
+================================================================================

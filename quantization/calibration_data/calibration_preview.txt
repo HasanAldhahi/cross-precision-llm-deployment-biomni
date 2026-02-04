@@ -1,0 +1,127 @@
+================================================================================
+CALIBRATION DATASET PREVIEW
+================================================================================
+
+Total samples: 123
+Data source: Baseline R0 evaluation (successful completions only)
+Format: prompt + full_response (complete trajectories)
+
+Task distribution:
+  • crispr_delivery: 8 samples
+  • gwas_causal_gene_gwas_catalog: 13 samples
+  • gwas_causal_gene_opentargets: 13 samples
+  • gwas_causal_gene_pharmaprojects: 13 samples
+  • gwas_variant_prioritization: 13 samples
+  • lab_bench_dbqa: 13 samples
+  • lab_bench_seqqa: 13 samples
+  • patient_gene_detection: 13 samples
+  • rare_disease_diagnosis: 12 samples
+  • screen_gene_retrieval: 12 samples
+
+Text statistics:
+  • Average length: 77,603 characters
+  • Min length: 9,835 characters
+  • Max length: 223,562 characters
+  • Total characters: 9,545,136
+  • Average tokens: 25,718
+  • Total tokens: 3,163,274
+  • Min tokens: 3,661
+  • Max tokens: 75,508
+
+================================================================================
+SAMPLE PREVIEW (First 3 samples, truncated)
+================================================================================
+
+Sample 1:
+--------------------------------------------------------------------------------
+Given the case description, identify the MOST relevant CRISPR delivery method from the options below:
+
+a. Plasmid Transfection
+b. Lentivirus/Retrovirus
+c. RNP/mRNA electroporation
+d. RNP/mRNA microinjection
+e. mRNA LNP
+f. AAV
+
+Category: In vivo
+Case Description: I hope to edit Mouse eye
+
+Please provide your response as follows:
+- Most relevant method (select one letter a-f):
+
+Given the case description, identify the MOST relevant CRISPR delivery method from the options below:
+
+a. Plasmid Transfe
+
+... [78,503 characters omitted] ...
+
+l delivery of co-packaged Cas9 mRNA and a Vegfa-targeting guide RNA prevents wet age-related macular degeneration in mice"** - Shows lentiviral delivery for eye applications.
+
+<solution>
+c
+</solution>
+================================================================================
+
+Sample 2:
+--------------------------------------------------------------------------------
+Given the case description, identify the MOST relevant CRISPR delivery method from the options below:
+
+a. Plasmid Transfection
+b. Lentivirus/Retrovirus
+c. RNP/mRNA electroporation
+d. RNP/mRNA microinjection
+e. mRNA LNP
+f. AAV
+
+Category: organoid
+Case Description: I hope to edit human colon organoid
+
+Please provide your response as follows:
+- Most relevant method (select one letter a-f):
+
+Given the case description, identify the MOST relevant CRISPR delivery method from the options below:
+
+a. Pla
+
+... [151,429 characters omitted] ...
+
+or organoid systems (completed)
+3. [✓] Identify the most commonly used and recommended method (completed)
+4. [✓] Provide the final answer based on evidence (ready to provide)
+
+<solution>
+c
+</solution>
+================================================================================
+
+Sample 3:
+--------------------------------------------------------------------------------
+Given the case description, identify the MOST relevant CRISPR delivery method from the options below:
+
+a. Plasmid Transfection
+b. Lentivirus/Retrovirus
+c. RNP/mRNA electroporation
+d. RNP/mRNA microinjection
+e. mRNA LNP
+f. AAV
+
+Category: In vivo
+Case Description: I hope to edit Mouse skin
+
+Please provide your response as follows:
+- Most relevant method (select one letter a-f):
+
+Given the case description, identify the MOST relevant CRISPR delivery method from the options below:
+
+a. Plasmid Transf
+
+... [96,284 characters omitted] ...
+
+ctroporation is technically feasible and commonly used for skin applications
+5. **Established protocols**: Multiple published methods demonstrate reliability for skin editing
+
+<solution>
+c
+</solution>
+================================================================================
+

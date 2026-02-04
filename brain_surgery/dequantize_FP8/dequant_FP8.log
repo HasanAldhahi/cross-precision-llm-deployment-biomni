@@ -1,0 +1,11 @@
+nohup: ignoring input
+🚀 Starting Robust Dynamic Dequantization...
+   Input: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Qwen3-32B-FP8
+   Output: ./qwen_bf16_robust
+Processing Shards:   0%|          | 0/7 [00:00<?, ?it/s]Processing Shards:  14%|█▍        | 1/7 [01:16<07:41, 76.95s/it]Processing Shards:  29%|██▊       | 2/7 [03:11<08:16, 99.34s/it]Processing Shards:  43%|████▎     | 3/7 [04:50<06:35, 98.89s/it]Processing Shards:  57%|█████▋    | 4/7 [06:26<04:53, 97.72s/it]Processing Shards:  71%|███████▏  | 5/7 [08:02<03:14, 97.28s/it]Processing Shards:  86%|████████▌ | 6/7 [10:00<01:44, 104.36s/it]Processing Shards: 100%|██████████| 7/7 [11:10<00:00, 93.14s/it] Processing Shards: 100%|██████████| 7/7 [11:10<00:00, 95.84s/it]
+🧹 Processing Metadata...
+
+✅ Done.
+   Quantized Layers Processed: 448
+   Standard Layers Copied:     259
+   Please run cpu_autopsy.py on the new folder.

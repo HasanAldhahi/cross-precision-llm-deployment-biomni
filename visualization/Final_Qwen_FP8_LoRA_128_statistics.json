@@ -1,0 +1,107 @@
+{
+  "processed": 433,
+  "correct": 195,
+  "total_execution_time": 2702581.012061119,
+  "by_task": {
+    "crispr_delivery": {
+      "total": 10,
+      "correct": 3,
+      "total_time": 67547.7842502594,
+      "incorrect": {
+        "max_token_error": 0,
+        "proxy_error": 1,
+        "wrong_answers": 6
+      }
+    },
+    "gwas_causal_gene_gwas_catalog": {
+      "total": 50,
+      "correct": 18,
+      "total_time": 262118.44306206703,
+      "incorrect": {
+        "max_token_error": 6,
+        "proxy_error": 5,
+        "wrong_answers": 20
+      }
+    },
+    "gwas_causal_gene_opentargets": {
+      "total": 50,
+      "correct": 24,
+      "total_time": 267784.698138237,
+      "incorrect": {
+        "max_token_error": 3,
+        "proxy_error": 4,
+        "wrong_answers": 19
+      }
+    },
+    "gwas_causal_gene_pharmaprojects": {
+      "total": 50,
+      "correct": 25,
+      "total_time": 380379.245295763,
+      "incorrect": {
+        "max_token_error": 1,
+        "proxy_error": 2,
+        "wrong_answers": 22
+      }
+    },
+    "gwas_variant_prioritization": {
+      "total": 43,
+      "correct": 21,
+      "total_time": 273228.5934998989,
+      "incorrect": {
+        "max_token_error": 2,
+        "proxy_error": 0,
+        "wrong_answers": 20
+      }
+    },
+    "lab_bench_dbqa": {
+      "total": 50,
+      "correct": 26,
+      "total_time": 382381.07121253014,
+      "incorrect": {
+        "max_token_error": 9,
+        "proxy_error": 2,
+        "wrong_answers": 12
+      }
+    },
+    "lab_bench_seqqa": {
+      "total": 50,
+      "correct": 37,
+      "total_time": 201443.25489997864,
+      "incorrect": {
+        "max_token_error": 8,
+        "proxy_error": 2,
+        "wrong_answers": 3
+      }
+    },
+    "patient_gene_detection": {
+      "total": 50,
+      "correct": 15,
+      "total_time": 380317.2956352234,
+      "incorrect": {
+        "max_token_error": 6,
+        "proxy_error": 2,
+        "wrong_answers": 27
+      }
+    },
+    "rare_disease_diagnosis": {
+      "total": 30,
+      "correct": 9,
+      "total_time": 215124.13385295868,
+      "incorrect": {
+        "max_token_error": 3,
+        "proxy_error": 4,
+        "wrong_answers": 14
+      }
+    },
+    "screen_gene_retrieval": {
+      "total": 50,
+      "correct": 17,
+      "total_time": 272256.4922142029,
+      "incorrect": {
+        "max_token_error": 2,
+        "proxy_error": 0,
+        "wrong_answers": 31
+      }
+    }
+  }
+}

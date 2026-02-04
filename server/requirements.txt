@@ -1,0 +1,13 @@
+# Core dependencies for evaluation suite
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# For Biomni-R0 evaluation with vLLM
+vllm>=0.3.0
+
+
+# Additional utilities
+tqdm>=4.65.0
+

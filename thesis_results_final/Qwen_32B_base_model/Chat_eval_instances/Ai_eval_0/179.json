@@ -1,0 +1,20 @@
+{
+  "instance_id": 179,
+  "chat_eval": "0",
+  "answer": "ENSG00000102081",
+  "extracted_solution_or_last_step": "Causal gene: {causal_gene} with {max_overlap} overlapping HPO terms </execute>",
+  "error": null,
+  "last_200_tokens": "in DisGeNET.parquet 4. [ ] Recalculate gene-phenotype overlaps with fixed data <execute> from biomni.tool.database import query_ensembl, query_clinvar import pandas as pd import obonet # Fix hp.obo loading with correct OBO parsing hp_obo_path = \"/projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni_Env/biomni_data/data_lake/hp.obo\" hpo_graph = obonet.read_obo(hp_obo_path) hpo_terms = {node: data['name'] for node, data in hpo_graph.nodes(data=True)} # Verify Ensembl conversion for all genes gene_symbols = {} for gene_id in candidate_genes: result = query_ensembl(endpoint=f\"lookup/id/{gene_id}\", verbose=False) if result and 'display_name' in result: gene_symbols[gene_id] = result['display_name'] else: gene_symbols[gene_id] = \"Unknown\" print(\"Gene Symbols:\", gene_symbols) # Check DisGeNET schema disgenet_path = \"/projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni_Env/biomni_data/data_lake/DisGeNET.parquet\" disgenet_df = pd.read_parquet(disgenet_path) print(\"DisGeNET columns:\", disgenet_df.columns.tolist()) # Recalculate overlaps with proper HPO terms gene_hpo_associations = {} for gene_id, symbol in gene_symbols.items(): # Get HPO terms from DisGeNET gene_associations = disgenet_df[disgenet_df['gene_id'] == symbol] hpo_list = list(gene_associations['disease_mapping_id'].unique()) # Get pathogenic variants from ClinVar clinvar_result = query_clinvar(prompt=f\"pathogenic variants in {symbol}\", max_results=3) clinvar_hpos = [v['phenotype'] for v in clinvar_result if 'phenotype' in v] # Combine both sources gene_hpo_associations[symbol] = list(set(hpo_list + clinvar_hpos)) print(\"Final gene HPO associations:\", gene_hpo_associations) # Calculate best match causal_gene = None max_overlap = 0 for gene, hpos in gene_hpo_associations.items(): overlap = set(patient_phenotypes) & set(hpos) if len(overlap) > max_overlap: max_overlap = len(overlap) causal_gene = gene print(f\"<solution> Causal gene: {causal_gene} with {max_overlap} overlapping HPO terms </execute></solution>",
+  "answer_count_in_last_200_tokens": 0,
+  "potential_answer_with_has_is": null,
+  "potential_answer_final_answer": null,
+  "potential_answer_conclusion": null,
+  "potential_answer_emerges": null,
+  "count_potential_answer_with_has_is": 0,
+  "count_potential_answer_final_answer": 0,
+  "count_potential_answer_conclusion": 0,
+  "count_potential_answer_emerges": 0,
+  "prompt": "\nTask: Given a patient's phenotypes and a list of candidate genes, identify the causal gene.\nPhenotypes: HP:0000276, HP:0001252, HP:0001388, HP:0002167, HP:0007018, HP:0011218, HP:0025270, HP:0001250, HP:0030692, HP:0100592, HP:0000316\nCandidate genes: ENSG00000170689, ENSG00000173372, ENSG00000156531, ENSG00000102081, ENSG00000107187, ENSG00000129003, ENSG00000205937, ENSG00000204248\n\nOutput format: {'causal_gene': [gene1]}\n        ",
+  "task_name": "patient_gene_detection",
+  "execution_time": 726.9694316387177
+}
