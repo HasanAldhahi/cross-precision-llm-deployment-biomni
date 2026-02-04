@@ -5,3 +5,23 @@
 *.env
 .env.local
 .env.*.local
+
+# Biomni tools 
+biomni_env/biomni_tools/*
+
+# Dequantized models 
+brain_surgery/qwen3_32B_bf16_dequantized_From_FP8/*
+brain_surgery/qwen_bf16_robust/*
+
+# LORAs
+brain_surgery/lora_extraction_results/*
+
+# SFT
+SFT/*
+
+# R0
+R0/*
+
+# Future Work
+compare/*
+
