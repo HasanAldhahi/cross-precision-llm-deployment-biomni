@@ -1,4 +1,7 @@
-*.safetensors filter=lfs diff=lfs merge=lfs -text
-*.pt filter=lfs diff=lfs merge=lfs -text
-*.bin filter=lfs diff=lfs merge=lfs -text
-*.jsonl filter=lfs diff=lfs merge=lfs -text
+# NOTE: LFS filters disabled here because git-lfs binary is not available
+# on the current HPC environment, which prevents committing large files.
+# If you have git-lfs installed locally, you can restore these lines.
+*.safetensors -text
+*.pt -text
+*.bin -text
+*.jsonl -text

@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/mnt/vast-kisski/home/haldhah/u17285/thesis/biomni_integration/Biomni/R0/Compare_R0_qwen3.py", line 679, in run_full_comparison
+    differences, modified_layers = self.compute_weight_differences_layer_by_layer(
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/vast-kisski/home/haldhah/u17285/thesis/biomni_integration/Biomni/R0/Compare_R0_qwen3.py", line 231, in compute_weight_differences_layer_by_layer
+    layer_time = self._compute_layer_difference(key, base_tensor, ft_tensor, threshold, diff_file)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/vast-kisski/home/haldhah/u17285/thesis/biomni_integration/Biomni/R0/Compare_R0_qwen3.py", line 380, in _compute_layer_difference
+    assert abs(rel_diff - rel_diff_np) < 1e-5, f"Relative diff mismatch: {abs(rel_diff - rel_diff_np)} (tensor: {rel_diff}, numpy: {rel_diff_np})"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Relative diff mismatch: 0.0005659367889165878 (tensor: 0.007745988157836689, numpy: 0.007180051412433386)
+Traceback (most recent call last):
+  File "/mnt/vast-kisski/home/haldhah/u17285/thesis/biomni_integration/Biomni/R0/Compare_R0_qwen3.py", line 679, in run_full_comparison
+    differences, modified_layers = self.compute_weight_differences_layer_by_layer(
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/vast-kisski/home/haldhah/u17285/thesis/biomni_integration/Biomni/R0/Compare_R0_qwen3.py", line 231, in compute_weight_differences_layer_by_layer
+    layer_time = self._compute_layer_difference(key, base_tensor, ft_tensor, threshold, diff_file)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/vast-kisski/home/haldhah/u17285/thesis/biomni_integration/Biomni/R0/Compare_R0_qwen3.py", line 380, in _compute_layer_difference
+    assert abs(rel_diff - rel_diff_np) < 1e-5, f"Relative diff mismatch: {abs(rel_diff - rel_diff_np)} (tensor: {rel_diff}, numpy: {rel_diff_np})"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Relative diff mismatch: 0.0005659367889165878 (tensor: 0.007745988157836689, numpy: 0.007180051412433386)

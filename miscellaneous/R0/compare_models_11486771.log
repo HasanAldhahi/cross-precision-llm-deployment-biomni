@@ -1,0 +1,442 @@
+================================================================================
+JobID = 11486771
+User = u17285, Account = kisski-narges-llm-interactive
+Partition = kisski-h100, Nodelist = ggpu240
+================================================================================
+===============================================
+Starting Biomni-R0 Model Comparison
+===============================================
+Conda environment: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni
+Start time: Sat Oct 18 00:23:09 CEST 2025
+Node: ggpu240
+SLURM_JOB_ID: 11486771
+===============================================
+Setting up Biomni environment...
+Environment variables set:
+  PATH starts with: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni/bin:/user/haldhah/u17285/thesis/biomni_integration/Biomni/biomni_env/biomni_tools/bin:/sw/rev/25.04/rome_mofed_cuda80_rocky8/linux-rocky8-zen/gcc-8.5.0/miniforge3-24.3.0-0-nv72gojvk7qfbp3spt3uiwkioapjsnas/bin
+  PYTHONPATH: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni/lib/python3.11/site-packages:
+  CONDA_PREFIX: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni
+===============================================
+Verifying Python environment...
+Python location: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni/bin/python
+Python 3.11.14
+Testing required packages...
+✅ PyTorch: 2.8.0+cu128
+✅ Transformers: 4.57.1
+✅ Safetensors: 0.6.2
+✅ NumPy: 2.1.0
+===============================================
+Environment verification complete!
+===============================================
+Current working directory: /user/haldhah/u17285/thesis/biomni_integration/Biomni/R0
+Testing script imports...
+✅ Script imports work
+===============================================
+Starting model comparison...
+Running comparison with default rank...
+================================================================================
+MODEL COMPARISON ANALYSIS
+================================================================================
+Base Model:      /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Qwen3-32B
+Finetuned Model: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-Preview
+Output Directory: ./model_comparison
+================================================================================
+✅ Base model directory found
+✅ Finetuned model directory found
+
+📥 Verifying local model files...
+  ✅ Base model: Found 17 safetensors files
+  ✅ Finetuned model: Found 27 safetensors files
+
+📋 Comparing Model Configurations...
+  ⚠️  Configuration differences found:
+    _name_or_path:
+      Base:      /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Qwen3-32B
+      Finetuned: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-Preview
+    dtype:
+      Base:      bfloat16
+      Finetuned: float32
+
+🔍 Comparing Model Architectures...
+  Loading base model weights...
+    Loading model-00001-of-00017.safetensors...
+    Loading model-00002-of-00017.safetensors...
+    Loading model-00003-of-00017.safetensors...
+    Loading model-00004-of-00017.safetensors...
+    Loading model-00005-of-00017.safetensors...
+    Loading model-00006-of-00017.safetensors...
+    Loading model-00007-of-00017.safetensors...
+    Loading model-00008-of-00017.safetensors...
+    Loading model-00009-of-00017.safetensors...
+    Loading model-00010-of-00017.safetensors...
+    Loading model-00011-of-00017.safetensors...
+    Loading model-00012-of-00017.safetensors...
+    Loading model-00013-of-00017.safetensors...
+    Loading model-00014-of-00017.safetensors...
+    Loading model-00015-of-00017.safetensors...
+    Loading model-00016-of-00017.safetensors...
+    Loading model-00017-of-00017.safetensors...
+  Loading finetuned model weights...
+    Loading model-00001-of-00027.safetensors...
+    Loading model-00002-of-00027.safetensors...
+    Loading model-00003-of-00027.safetensors...
+    Loading model-00004-of-00027.safetensors...
+    Loading model-00005-of-00027.safetensors...
+    Loading model-00006-of-00027.safetensors...
+    Loading model-00007-of-00027.safetensors...
+    Loading model-00008-of-00027.safetensors...
+    Loading model-00009-of-00027.safetensors...
+    Loading model-00010-of-00027.safetensors...
+    Loading model-00011-of-00027.safetensors...
+    Loading model-00012-of-00027.safetensors...
+    Loading model-00013-of-00027.safetensors...
+    Loading model-00014-of-00027.safetensors...
+    Loading model-00015-of-00027.safetensors...
+    Loading model-00016-of-00027.safetensors...
+    Loading model-00017-of-00027.safetensors...
+    Loading model-00018-of-00027.safetensors...
+    Loading model-00019-of-00027.safetensors...
+    Loading model-00020-of-00027.safetensors...
+    Loading model-00021-of-00027.safetensors...
+    Loading model-00022-of-00027.safetensors...
+    Loading model-00023-of-00027.safetensors...
+    Loading model-00024-of-00027.safetensors...
+    Loading model-00025-of-00027.safetensors...
+    Loading model-00026-of-00027.safetensors...
+    Loading model-00027-of-00027.safetensors...
+
+  📊 Architecture Comparison:
+    Common parameters:     707
+    Only in base:          0
+    Only in finetuned:     0
+
+  ℹ️  No explicit LoRA layers found in key names
+
+📐 Computing Weight Differences Layer-by-Layer (threshold=1e-06)...
+  📋 Collecting common layers...
+  🔍 Scanning keys across files...
+  ✅ Found 707 common layers
+  📁 Opening safetensors files...
+    Loading base: model-00001-of-00017.safetensors
+    Loading base: model-00002-of-00017.safetensors
+    Loading base: model-00003-of-00017.safetensors
+    Loading base: model-00004-of-00017.safetensors
+    Loading base: model-00005-of-00017.safetensors
+    Loading base: model-00006-of-00017.safetensors
+    Loading base: model-00007-of-00017.safetensors
+    Loading base: model-00008-of-00017.safetensors
+    Loading base: model-00009-of-00017.safetensors
+    Loading base: model-00010-of-00017.safetensors
+    Loading base: model-00011-of-00017.safetensors
+    Loading base: model-00012-of-00017.safetensors
+    Loading base: model-00013-of-00017.safetensors
+    Loading base: model-00014-of-00017.safetensors
+    Loading base: model-00015-of-00017.safetensors
+    Loading base: model-00016-of-00017.safetensors
+    Loading base: model-00017-of-00017.safetensors
+    Loading finetuned: model-00001-of-00027.safetensors
+    Loading finetuned: model-00002-of-00027.safetensors
+    Loading finetuned: model-00003-of-00027.safetensors
+    Loading finetuned: model-00004-of-00027.safetensors
+    Loading finetuned: model-00005-of-00027.safetensors
+    Loading finetuned: model-00006-of-00027.safetensors
+    Loading finetuned: model-00007-of-00027.safetensors
+    Loading finetuned: model-00008-of-00027.safetensors
+    Loading finetuned: model-00009-of-00027.safetensors
+    Loading finetuned: model-00010-of-00027.safetensors
+    Loading finetuned: model-00011-of-00027.safetensors
+    Loading finetuned: model-00012-of-00027.safetensors
+    Loading finetuned: model-00013-of-00027.safetensors
+    Loading finetuned: model-00014-of-00027.safetensors
+    Loading finetuned: model-00015-of-00027.safetensors
+    Loading finetuned: model-00016-of-00027.safetensors
+    Loading finetuned: model-00017-of-00027.safetensors
+    Loading finetuned: model-00018-of-00027.safetensors
+    Loading finetuned: model-00019-of-00027.safetensors
+    Loading finetuned: model-00020-of-00027.safetensors
+    Loading finetuned: model-00021-of-00027.safetensors
+    Loading finetuned: model-00022-of-00027.safetensors
+    Loading finetuned: model-00023-of-00027.safetensors
+    Loading finetuned: model-00024-of-00027.safetensors
+    Loading finetuned: model-00025-of-00027.safetensors
+    Loading finetuned: model-00026-of-00027.safetensors
+    Loading finetuned: model-00027-of-00027.safetensors
+  ✅ Loaded 707 base tensors and 707 finetuned tensors
+
+🔄 Processing layer 1/707: lm_head.weight
+
+❌ Error during comparison: Relative diff mismatch: 0.0005659367889165878 (tensor: 0.007745988157836689, numpy: 0.007180051412433386)
+Running comparison with LoRA rank 32...
+================================================================================
+MODEL COMPARISON ANALYSIS
+================================================================================
+Base Model:      /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Qwen3-32B
+Finetuned Model: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-Preview
+Output Directory: ./model_comparison
+================================================================================
+✅ Base model directory found
+✅ Finetuned model directory found
+
+📥 Verifying local model files...
+  ✅ Base model: Found 17 safetensors files
+  ✅ Finetuned model: Found 27 safetensors files
+
+📋 Comparing Model Configurations...
+  ⚠️  Configuration differences found:
+    _name_or_path:
+      Base:      /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Qwen3-32B
+      Finetuned: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-Preview
+    dtype:
+      Base:      bfloat16
+      Finetuned: float32
+
+🔍 Comparing Model Architectures...
+  Loading base model weights...
+    Loading model-00001-of-00017.safetensors...
+    Loading model-00002-of-00017.safetensors...
+    Loading model-00003-of-00017.safetensors...
+    Loading model-00004-of-00017.safetensors...
+    Loading model-00005-of-00017.safetensors...
+    Loading model-00006-of-00017.safetensors...
+    Loading model-00007-of-00017.safetensors...
+    Loading model-00008-of-00017.safetensors...
+    Loading model-00009-of-00017.safetensors...
+    Loading model-00010-of-00017.safetensors...
+    Loading model-00011-of-00017.safetensors...
+    Loading model-00012-of-00017.safetensors...
+    Loading model-00013-of-00017.safetensors...
+    Loading model-00014-of-00017.safetensors...
+    Loading model-00015-of-00017.safetensors...
+    Loading model-00016-of-00017.safetensors...
+    Loading model-00017-of-00017.safetensors...
+  Loading finetuned model weights...
+    Loading model-00001-of-00027.safetensors...
+    Loading model-00002-of-00027.safetensors...
+    Loading model-00003-of-00027.safetensors...
+    Loading model-00004-of-00027.safetensors...
+    Loading model-00005-of-00027.safetensors...
+    Loading model-00006-of-00027.safetensors...
+    Loading model-00007-of-00027.safetensors...
+    Loading model-00008-of-00027.safetensors...
+    Loading model-00009-of-00027.safetensors...
+    Loading model-00010-of-00027.safetensors...
+    Loading model-00011-of-00027.safetensors...
+    Loading model-00012-of-00027.safetensors...
+    Loading model-00013-of-00027.safetensors...
+    Loading model-00014-of-00027.safetensors...
+    Loading model-00015-of-00027.safetensors...
+    Loading model-00016-of-00027.safetensors...
+    Loading model-00017-of-00027.safetensors...
+    Loading model-00018-of-00027.safetensors...
+    Loading model-00019-of-00027.safetensors...
+    Loading model-00020-of-00027.safetensors...
+    Loading model-00021-of-00027.safetensors...
+    Loading model-00022-of-00027.safetensors...
+    Loading model-00023-of-00027.safetensors...
+    Loading model-00024-of-00027.safetensors...
+    Loading model-00025-of-00027.safetensors...
+    Loading model-00026-of-00027.safetensors...
+    Loading model-00027-of-00027.safetensors...
+
+  📊 Architecture Comparison:
+    Common parameters:     707
+    Only in base:          0
+    Only in finetuned:     0
+
+  ℹ️  No explicit LoRA layers found in key names
+
+📐 Computing Weight Differences Layer-by-Layer (threshold=1e-06)...
+  📋 Collecting common layers...
+  🔍 Scanning keys across files...
+  ✅ Found 707 common layers
+  📁 Opening safetensors files...
+    Loading base: model-00001-of-00017.safetensors
+    Loading base: model-00002-of-00017.safetensors
+    Loading base: model-00003-of-00017.safetensors
+    Loading base: model-00004-of-00017.safetensors
+    Loading base: model-00005-of-00017.safetensors
+    Loading base: model-00006-of-00017.safetensors
+    Loading base: model-00007-of-00017.safetensors
+    Loading base: model-00008-of-00017.safetensors
+    Loading base: model-00009-of-00017.safetensors
+    Loading base: model-00010-of-00017.safetensors
+    Loading base: model-00011-of-00017.safetensors
+    Loading base: model-00012-of-00017.safetensors
+    Loading base: model-00013-of-00017.safetensors
+    Loading base: model-00014-of-00017.safetensors
+    Loading base: model-00015-of-00017.safetensors
+    Loading base: model-00016-of-00017.safetensors
+    Loading base: model-00017-of-00017.safetensors
+    Loading finetuned: model-00001-of-00027.safetensors
+    Loading finetuned: model-00002-of-00027.safetensors
+    Loading finetuned: model-00003-of-00027.safetensors
+    Loading finetuned: model-00004-of-00027.safetensors
+    Loading finetuned: model-00005-of-00027.safetensors
+    Loading finetuned: model-00006-of-00027.safetensors
+    Loading finetuned: model-00007-of-00027.safetensors
+    Loading finetuned: model-00008-of-00027.safetensors
+    Loading finetuned: model-00009-of-00027.safetensors
+    Loading finetuned: model-00010-of-00027.safetensors
+    Loading finetuned: model-00011-of-00027.safetensors
+    Loading finetuned: model-00012-of-00027.safetensors
+    Loading finetuned: model-00013-of-00027.safetensors
+    Loading finetuned: model-00014-of-00027.safetensors
+    Loading finetuned: model-00015-of-00027.safetensors
+    Loading finetuned: model-00016-of-00027.safetensors
+    Loading finetuned: model-00017-of-00027.safetensors
+    Loading finetuned: model-00018-of-00027.safetensors
+    Loading finetuned: model-00019-of-00027.safetensors
+    Loading finetuned: model-00020-of-00027.safetensors
+    Loading finetuned: model-00021-of-00027.safetensors
+    Loading finetuned: model-00022-of-00027.safetensors
+    Loading finetuned: model-00023-of-00027.safetensors
+    Loading finetuned: model-00024-of-00027.safetensors
+    Loading finetuned: model-00025-of-00027.safetensors
+    Loading finetuned: model-00026-of-00027.safetensors
+    Loading finetuned: model-00027-of-00027.safetensors
+  ✅ Loaded 707 base tensors and 707 finetuned tensors
+
+🔄 Processing layer 1/707: lm_head.weight
+
+❌ Error during comparison: Relative diff mismatch: 0.0005659367889165878 (tensor: 0.007745988157836689, numpy: 0.007180051412433386)
+Analyzing comparison results...
+================================================================================
+  LoRA COMPARISON RESULTS ANALYSIS
+================================================================================
+Directory: ./model_comparison
+
+
+================================================================================
+  1. ARCHITECTURE ANALYSIS
+================================================================================
+
+Common parameters:     707
+Only in base:          0
+Only in finetuned:     0
+
+ℹ️  No explicit LoRA keys found
+
+================================================================================
+  2. WEIGHT MODIFICATION ANALYSIS
+================================================================================
+
+Total layers analyzed:    707
+Significantly modified:   707
+
+Modifications by layer type:
+  input_layernorm.weight                   :  64 layers
+  down_proj.weight                         :  64 layers
+  gate_proj.weight                         :  64 layers
+  up_proj.weight                           :  64 layers
+  post_attention_layernorm.weight          :  64 layers
+  k_norm.weight                            :  64 layers
+  k_proj.weight                            :  64 layers
+  o_proj.weight                            :  64 layers
+  q_norm.weight                            :  64 layers
+  q_proj.weight                            :  64 layers
+  v_proj.weight                            :  64 layers
+  lm_head.weight                           :   1 layers
+  embed_tokens.weight                      :   1 layers
+  norm.weight                              :   1 layers
+
+Top 15 most modified layers:
+   1. model.layers.0.input_layernorm.weight
+      Rel.Diff: 0.011291 | Changed: 99.61% | Shape: [5120]
+   2. model.layers.1.mlp.up_proj.weight
+      Rel.Diff: 0.009888 | Changed: 97.03% | Shape: [25600, 5120]
+   3. model.layers.1.self_attn.q_proj.weight
+      Rel.Diff: 0.009347 | Changed: 98.87% | Shape: [8192, 5120]
+   4. model.layers.59.self_attn.q_proj.weight
+      Rel.Diff: 0.009286 | Changed: 99.58% | Shape: [8192, 5120]
+   5. model.layers.30.self_attn.q_proj.weight
+      Rel.Diff: 0.009151 | Changed: 99.51% | Shape: [8192, 5120]
+   6. model.layers.0.mlp.up_proj.weight
+      Rel.Diff: 0.009116 | Changed: 99.43% | Shape: [25600, 5120]
+   7. model.layers.63.self_attn.q_proj.weight
+      Rel.Diff: 0.009077 | Changed: 99.57% | Shape: [8192, 5120]
+   8. model.layers.59.self_attn.k_proj.weight
+      Rel.Diff: 0.009004 | Changed: 99.56% | Shape: [1024, 5120]
+   9. model.layers.31.self_attn.q_proj.weight
+      Rel.Diff: 0.008964 | Changed: 99.49% | Shape: [8192, 5120]
+  10. model.layers.58.self_attn.k_proj.weight
+      Rel.Diff: 0.008926 | Changed: 99.57% | Shape: [1024, 5120]
+  11. model.layers.58.self_attn.q_proj.weight
+      Rel.Diff: 0.008924 | Changed: 99.58% | Shape: [8192, 5120]
+  12. model.layers.2.mlp.up_proj.weight
+      Rel.Diff: 0.008922 | Changed: 98.30% | Shape: [25600, 5120]
+  13. model.layers.63.self_attn.k_proj.weight
+      Rel.Diff: 0.008851 | Changed: 99.57% | Shape: [1024, 5120]
+  14. model.layers.50.self_attn.q_proj.weight
+      Rel.Diff: 0.008776 | Changed: 99.58% | Shape: [8192, 5120]
+  15. model.layers.0.mlp.gate_proj.weight
+      Rel.Diff: 0.008762 | Changed: 99.42% | Shape: [25600, 5120]
+
+================================================================================
+  3. LORA PATTERN DETECTION
+================================================================================
+
+Layers analyzed:           13
+LoRA-like patterns found:  0
+
+ℹ️  No LoRA-like patterns detected
+   The model may be fully fine-tuned or uses different adaptation method
+
+================================================================================
+  5. CONFIGURATION DIFFERENCES
+================================================================================
+
+Found configuration differences:
+
+  _name_or_path:
+    Base:      /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Qwen3-32B
+    Finetuned: /projects/extern/kisski/kisski-narges-llm-interactive/dir.project/Biomni-R0-32B-Preview
+
+  dtype:
+    Base:      bfloat16
+    Finetuned: float32
+
+================================================================================
+  6. SUMMARY & RECOMMENDATIONS
+================================================================================
+
+📚 SCENARIO: Full Fine-tuning Detected
+
+The model appears to be fully fine-tuned (all parameters modified).
+
+Recommended actions:
+  1. Apply fresh LoRA adapters on top of the finetuned model
+  2. Or perform full fine-tuning if resources allow
+  3. Focus on attention and FFN layers for LoRA
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Review the comparison report:
+   cat model_comparison/comparison_report.txt
+
+2. Fine-tune with extracted LoRA:
+   python finetune_with_lora.py --lora-weights model_comparison/extracted_lora_weights.safetensors
+
+3. Or start fresh with detected config:
+   python finetune_with_lora.py --rank 16 --target-modules [detected_modules]
+
+4. Evaluate with Biomni A1 agent:
+   python run_R0.py --base-url http://localhost:30000
+
+================================================================================
+
+===============================================
+Model comparison completed successfully!
+End time: Sat Oct 18 00:24:14 CEST 2025
+Check logs: compare_models_11486771.log
+Check errors: compare_models_11486771.err
+===============================================
+============ Job Information ===================================================
+Submitted: 2025-10-17T21:57:15
+Started: 2025-10-18T00:22:27
+Ended: 2025-10-18T00:24:15
+Elapsed: 2 min, Limit: 720 min, Difference: 718 min
+CPUs: 32, Nodes: 1
+Estimated Consumption: 35.00 core-hours
+================================================================================
