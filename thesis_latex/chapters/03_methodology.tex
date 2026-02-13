@@ -1,0 +1,412 @@
+\chapter{Methodology}
+
+\section{Experimental Design Overview}
+This chapter describes the setup used to study how LoRA updates can be transferred when the base model and the adapter are at different precision levels. We test three methods: Naive Transfer (Method A), Corrective Extraction (Method B), and Direct Quantization (Method C).
+Each method tests a different pathway by which fine tuning information may be preserved or degraded when different parts of the model use different numerical formats. We run the experiments with two separate implementations. The first uses vLLM, a standard inference system that applies optimized kernels and manages low level details automatically, and it is used mainly for Method A.
+The second approach uses a custom pipeline that reconstructs and modifies quantized weights directly. This allows access to internal model representations and is required for Method B. We describe each method in the same format, with the same set of implementation and execution details:
+\begin{enumerate}
+    \item \textbf{Mathematical Formulation}: theoretical motivation and the tensor operations used by the method.
+    \item \textbf{Hypothesis}: the expected relationship between quantization noise and the semantic signal in the adapter.
+    \item \textbf{Implementation}: the procedure and engineering details used to run the method, including pseudocode for the core logic.
+\end{enumerate}
+Our experimental setup comprises the following components:
+
+\begin{itemize}
+    \item \textbf{Base model}: Qwen3-32B \cite{yang2025qwen3}, a 32B-parameter state-of-the-art language model.
+    \item \textbf{Domain-adapted model}: Biomni-R0-32B \cite{biomnir0}, a biomedical reasoning model derived from Qwen3-32B.
+    \item \textbf{Quantization target}: FP8 (E4M3) \cite{micikevicius2022fp8} with block-wise quantization (Block-128).
+    \item \textbf{Adapter type}: LoRA \cite{hu2021lora} with rank 256.
+    \item \textbf{Evaluation domain}: biomedical reasoning tasks from the Eval1 benchmark.
+\end{itemize}
+
+Baseline performance is defined by Biomni-R0-32B evaluated in full BF16 precision, which serves as the gold-standard reference point for all subsequent comparisons on the Eval1 benchmark.
+\section{Baseline: Biomni-R0-32B (BF16)}
+
+Biomni-R0-32B serves as our gold standard reference model \cite{biomnir0}. It is a domain-adapted version of Qwen3-32B specifically fine-tuned for biomedical reasoning tasks by the Biomni Project at Stanford University \cite{biomni2025}. The model demonstrates superior performance on:
+
+\begin{itemize}
+    \item CRISPR delivery mechanism questions
+    \item Genetic variant interpretation and prioritization
+    \item Genome-wide association studies (GWAS) causal gene identification
+    \item Laboratory biology database question answering
+    \item Sequence analysis and interpretation
+    \item Patient gene detection from clinical data
+    \item Rare disease diagnosis
+    \item Functional screening gene retrieval
+\end{itemize}
+
+The model was trained using the Biomni-SFT dataset, a proprietary collection of biomedical instruction-response pairs. While we do not have access to the training data, the model weights are publicly available on HuggingFace \cite{biomnir0}. The model is stored in BF16 precision with a total size of approximately 64 GB. All experimental methods aim to achieve comparable performance while reducing the memory footprint through FP8 quantization.
+
+The baseline performance of 44.5\% established in this study represents the model's ``offline'' reasoning and local tool-use capability. This deviates from the 66.9\% reported in the original paper primarily due to the exclusion of the \texttt{advanced\_web\_search\_claude} tool \cite{biomnir0}. The original study relied heavily on this paid tool for real-time information retrieval; by excluding it, we test the intrinsic knowledge of the model and its ability to navigate free, open-source biomedical databases. This creates a more challenging environment for the agent but ensures the deployment remains cost-effective and resource-efficient.
+Also, the source code for evaluating the model is not publically available. The authors of the original study provided only a high level description of the evaluation pipeline. 
+\section{Method A: Naive Transfer}
+
+\subsection{Conceptual Approach}
+
+Method A, ``Naive Transfer,'' assumes that quantization noise and semantic adaptation occupy different directions in weight space. The method computes a LoRA adapter from the BF16 weight difference between the domain adapted model and the base model, and then applies this adapter to the FP8 quantized base model.
+
+\subsection{Mathematical Formulation}
+
+The LoRA extraction is performed as follows:
+
+\begin{equation}
+L_{bio} = W_{biomni}^{BF16} - W_{qwen}^{BF16}
+\end{equation}
+
+where $W_{biomni}^{BF16}$ represents the weights of Biomni-R0-32B and $W_{qwen}^{BF16}$ represents the weights of the base Qwen3-32B model, both in BF16 precision.
+
+The extracted difference $L_{bio}$ is then approximated using low-rank decomposition:
+
+\begin{equation}
+L_{bio} \approx B \cdot A
+\end{equation}
+
+where $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ with rank $r = 256$.
+
+Finally, the LoRA is applied to the FP8-quantized base model:
+
+\begin{equation}
+W_{final} = W_{qwen}^{FP8} + B \cdot A
+\end{equation}
+
+Note that this creates a mixed-precision model where the base weights are in FP8 and the LoRA adapter is in BF16.
+
+\subsection{Hypothesis}
+
+The key hypothesis underlying Method A is that:
+
+\begin{equation}
+W_{biomni}^{BF16} - W_{qwen}^{BF16} \approx W_{biomni}^{FP8} - W_{qwen}^{FP8}
+\end{equation}
+
+This equivalence holds if the quantization noise $N_{quant}$ is approximately the same for both models and cancels out in the subtraction:
+
+\begin{equation}
+(W_{biomni}^{BF16} + N_{biomni}) - (W_{qwen}^{BF16} + N_{qwen}) \approx W_{biomni}^{BF16} - W_{qwen}^{BF16}
+\end{equation}
+
+when $N_{biomni} \approx N_{qwen}$.
+
+\subsection{Implementation}
+
+Method A is implemented using MergeKit's \cite{mergekit2023} LoRA extraction functionality:
+
+\begin{enumerate}
+    \item Load Qwen3-32B-BF16 and Biomni-R0-32B-BF16
+    \item Compute weight differences layer-by-layer
+    \item Apply SVD to extract rank-256 approximation using MergeKit toolkit \cite{mergekit2023} and Sanitize the adapter to remove embedding and normalization parameters.
+    \item Save as LoRA adapter in SafeTensors format
+    \item Apply adapter to Qwen3-32B-FP8 using vLLM \cite{kwon2023efficient}
+\end{enumerate}
+Both the MergeKit toolkit's \texttt{extract\_lora} \cite{mergekit2023} method and the sanitization pipeline will be discussed more thoroughly in Method B.
+
+\section{Method B: Corrective Extraction}
+
+\subsection{Conceptual Approach}
+
+Method B, defined as ``Corrective Extraction'', seeks to develop a LoRA adapter that encodes domain-specific knowledge while also correcting quantization mistakes. The method derives a LoRA from the difference between the BF16 domain-adapted model and the dequantized FP8 base model.
+
+\subsection{Mathematical Formulation}
+
+The corrective LoRA is extracted as:
+
+\begin{equation}
+L_{corrective} = W_{biomni}^{BF16} - \text{Dequant}(W_{qwen}^{FP8})
+\end{equation}
+
+where $\text{Dequant}(\cdot)$ converts FP8 weights back to BF16 by applying the inverse quantization:
+
+\begin{equation}
+\text{Dequant}(W^{FP8}) = W^{FP8} \times s_{expanded}
+\end{equation}
+
+The extracted difference includes both the semantic adaptation and the quantization error:
+
+\begin{equation}
+L_{corrective} = (W_{biomni}^{BF16} - W_{qwen}^{BF16}) + (W_{qwen}^{BF16} - \text{Dequant}(W_{qwen}^{FP8}))
+\end{equation}
+
+\begin{equation}
+L_{corrective} = \Delta W_{semantic} - N_{quant}
+\end{equation}
+
+This combined difference is then approximated using rank-256 decomposition and applied to the FP8 base model:
+
+\begin{equation}
+W_{final} = W_{qwen}^{FP8} + B \cdot A
+\end{equation}
+\subsection{Hypothesis}
+
+Method B is motivated by the hypothesis that a rank-256 adapter has sufficient capacity to encode two distinct components at once: the low-rank semantic adaptation $\Delta W_{semantic}$ and an additional correction term that counteracts quantization distortion, $-N_{quant}$. Formally, we test whether a single LoRA update can represent both of the following:
+
+\begin{enumerate}
+    \item The semantic adaptation $\Delta W_{semantic}$ (low-rank)
+    \item The quantization correction $-N_{quant}$ (high-rank)
+\end{enumerate}
+
+If this assumption holds, the resulting model should remain domain-adapted while also compensating for a substantial fraction of the quantization-induced distortion, thereby behaving closer to a dequantized model at inference time.
+
+\subsection{Implementation}
+Method B differs from Method A in that it works on the quantized weight tensors, since the computations are performed in weight space. We built a dequantization pipeline and separated the workflow into three stages.
+\subsubsection{Step 1: Tensor Reconstruction (The Bridge Model)}
+Frameworks such as Transformers and vLLM aim for high throughput inference and automate most operations.
+They are built for speed and efficiency, so they hide the internal structure and storage details of compressed model weights, providing access only through standard prediction functions. 
+This design works well for inference, but it complicates Corrective Extraction, which requires direct access to and modification of the model weights.
+Specifically, computing the corrective LoRA requires an element-wise difference between the adapted BF16 model and the FP8 base model:
+\begin{equation}
+\Delta W = W_{adapted}^{(BF16)} - W_{base}^{(FP8)}.
+\end{equation}
+Existing tools and libraries generally lack a simple method to access the fundamental FP8 data and their corresponding block-specific scaling parameters in a way that allows for direct mathematical manipulation.
+The Qwen-32B-FP8 model is distributed as SafeTensors files in which each layer stores both the quantized weights and the corresponding scaling tensors:
+\begin{itemize}
+    \item Weight tensors with dtype \texttt{float8\_e4m3fn} (FP8 E4M3 format)
+    \item Scale tensors with dtype \texttt{float32} and suffix \texttt{\_input\_scale\_inv}
+\end{itemize}
+
+The naming convention \texttt{\_input\_scale\_inv} indicates that the stored values are \emph{inverse scales}, which implies the reconstruction rule:
+\begin{equation}
+W_{BF16} = W_{FP8} \times s_{inv}.
+\end{equation}
+
+To recover the correct quantization layout, we systematically inspected tensor shapes across layers and identified the Block-128 scheme:
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Layer} & \textbf{Weight Shape} & \textbf{Scale Shape} \\
+\midrule
+\texttt{model.layers.0.mlp.gate\_proj} & $[5120, 13696]$ & $[40, 107]$ \\
+\texttt{model.layers.0.mlp.up\_proj} & $[5120, 13696]$ & $[40, 107]$ \\
+\texttt{model.layers.0.self\_attn.q\_proj} & $[5120, 5120]$ & $[40, 40]$ \\
+\bottomrule
+\end{tabular}
+\caption{Weight and scale tensor shapes revealing Block-128 quantization}
+\label{tab:tensor_shapes_method_b}
+\end{table}
+
+The ratios $\frac{5120}{40} = 128$ and $\frac{13696}{107} \approx 128$ confirm the block size. We implemented the following dequantization algorithm:
+
+\begin{lstlisting}[language=Python, caption=Block Dequantization Algorithm]
+def expand_scale(scale, target_shape):
+    """Expand scale tensor to match target weight shape."""
+    block_H = target_shape[0] // scale.shape[0]
+    block_W = target_shape[1] // scale.shape[1]
+    expanded = scale.repeat_interleave(block_H, dim=0)
+    expanded = expanded.repeat_interleave(block_W, dim=1)
+    if expanded.shape != target_shape:
+        expanded = expanded[:target_shape[0], :target_shape[1]]
+    return expanded
+
+def dequantize_layer(weight_fp8, scale_inv):
+    """Dequantize a single layer."""
+    scale_expanded = expand_scale(scale_inv, weight_fp8.shape)
+    weight_float = weight_fp8.to(torch.float32)
+    weight_dequant = weight_float * scale_expanded
+    return weight_dequant.to(torch.bfloat16)
+\end{lstlisting}
+
+
+\subsubsection{Step 2: Statistical Verification (The Autopsy Protocol)}
+To avoid expensive GPU runs during early checks, we validated the reconstructed tensors on CPU to catch corruption. In a correctly reconstructed layer, weights are typically centered near zero with a moderate variance. When reconstruction fails, the mean shifts away from zero, values clip or saturate, or the variance becomes unusually large. These simple statistics helped identify issues such as incorrect scaling factors, reshape errors, and dtype conversion mistakes.
+\begin{itemize}
+    \item Mean: $\mu \approx 0.0$ (typically $|\mu| < 0.01$)
+    \item Standard Deviation: $\sigma \approx 0.02$ to $0.05$
+    \item Min/Max: Within $[-0.5, 0.5]$ for most layers
+\end{itemize}
+
+\begin{lstlisting}[language=Python, caption=Weight Autopsy Verification]
+def autopsy_layer(weight, layer_name):
+    """Perform statistical autopsy on a weight tensor."""
+    stats = {
+        'mean': weight.mean().item(),
+        'std': weight.std().item(),
+        'min': weight.min().item(),
+        'max': weight.max().item(),
+    }
+    if abs(stats['mean']) > 1.0:
+        print(f"WARNING: {layer_name} has exploded mean")
+    if stats['std'] > 10.0:
+        print(f"WARNING: {layer_name} has exploded std")
+    return stats
+\end{lstlisting}
+This iterative procedure enabled rapid debugging and converged on a correct reconstruction pipeline:
+
+\begin{enumerate}
+    \item \textbf{Iteration 1}: Per-tensor scaling $\rightarrow$ weight magnitudes exploded (Mean $> 448$)
+    \item \textbf{Iteration 2}: Incorrect block size (64) $\rightarrow$ shape mismatch during reconstruction
+    \item \textbf{Iteration 3}: Correct block size (128) but incorrect scale application $\rightarrow$ systematically biased weights
+    \item \textbf{Iteration 4}: Correct implementation $\rightarrow$ Healthy statistics (Mean $\approx 0$, Std $\approx 0.02$)
+\end{enumerate}
+\subsubsection{Step 3: LoRA Extraction and Sanitization}
+Once the bridge model was converted to a single BF16 format, we isolated what the biomedical training added. Using MergeKit \cite{mergekit2023} extract\_lora method, we extracted a low-rank adapter (LoRA) that approximates the difference between the biomedical model weights and the reconstructed bridge weights. This is written as:
+\begin{equation}
+\Delta W = W_{biomni}^{BF16} - W_{bridge}^{BF16} \approx U_{256} \Sigma_{256} V_{256}^T = B \cdot A.
+\end{equation}
+In this formulation, $\Delta W$ is approximated with a rank-256 factorization, which gives LoRA matrices $A$ and $B$ that represent the transferred update.
+
+This adapter could not be used as-is. When we tried to load it through vLLM's adapter interface, it failed at runtime because vLLM's FP8 kernels restrict which modules can receive LoRA updates \cite{vllmpr33234}. Historically, vLLM's LoRA support has omitted certain transformer components---including \texttt{lm\_head}, \texttt{embed\_tokens}, normalization layers, and bias terms---because these modules are treated differently from the attention and feed-forward blocks that LoRA typically targets.
+One limitation is that \texttt{embed\_tokens} and \texttt{lm\_head} act on full vocabulary sized tensors rather than hidden state sized tensors. This often calls for a different low rank parameterization, for example separate LoRA matrices designed for embedding type weights. Early vLLM LoRA support did not implement this special case, which could cause adapter load failures, including missing tensors and shape mismatches.
+In practice, embedding-related logic can also interact with extended-vocabulary checkpoints (for example, separate files like \texttt{new\_embeddings.safetensors}); although vLLM identifies embedding modules (e.g., via an \texttt{EMBEDDING\_MODULES} check), it may reject adapters when the expected embedding LoRA weights are incomplete. Finally, normalization and bias parameters are commonly absent from standard LoRA configurations or do not map cleanly to rank-based adapters, and vLLM prioritizes adapting attention and MLP/FFN weights for efficiency.
+
+We therefore implemented a \emph{sanitization pipeline} that removes LoRA parameters attached to unsupported modules:
+\begin{itemize}
+    \item \textbf{Load and inspect}: the LoRA state dictionary was loaded into CPU memory to inspect parameter keys.
+    \item \textbf{Define exclusions}: a forbidden-substring list was specified as \texttt{["lm\_head", "embed\_tokens", "norm", "bias"]}.
+    \item \textbf{Prune incompatible tensors}: any tensor key containing one of the forbidden substrings was removed.
+    \item \textbf{Update adapter configuration}: \texttt{adapter\_config.json} was edited to set \texttt{modules\_to\_save = null}.
+\end{itemize}
+This sanitization step introduces a necessary trade-off. 
+Information learned in the embedding layers, normalization parameters, or bias terms is removed. This means the adapter keeps only part of the residual update, not the full change.
+
+This loss of information likely degrades transfer fidelity and is a probable contributor to the higher error rate observed for Method B. Despite the fact that the sanitization step was also performed in Method A, the performance degradation is not as severe as in Method B. This is because in Method A, the adapter is applied on top of the base model in BF16 precision, which is more faithful to the original weights compared to the quantized weights in Method B.
+\section{Method C: Direct Quantization}
+
+\subsection{Conceptual Approach}
+
+Method C, termed ``Direct Quantization,'' takes the most direct route to low-precision deployment. Rather than attaching an adapter to a quantized base model, we quantize the already domain-adapted Biomni-R0-32B model itself. In practice, this means applying post-training quantization to convert the adapted BF16 weights directly into FP8. Because quantization can distort the specialized behavior learned during adaptation, we calibrate the procedure on biomedical-domain data, aiming to choose FP8 scaling factors that are tuned to the activation patterns the model exhibits on biomedical reasoning traces.
+\subsection{Mathematical Formulation}
+
+The quantization procedure is defined as:
+\begin{equation}
+W_{biomni}^{FP8} = \text{Quant}(W_{biomni}^{BF16}, \mathcal{D}_{calibration}),
+\end{equation}
+where $\mathcal{D}_{calibration}$ denotes a biomedical text dataset used to estimate the quantization scales.
+
+\subsection{Hypothesis}
+
+Method C is motivated by the hypothesis that calibration on biomedical-domain data produces quantization scales that are better matched to the activation statistics of biomedical reasoning than scales derived from generic text. If this holds, then directly quantizing the adapted model should retain more of its domain-specific performance than an FP8 model calibrated out of domain, while still achieving a substantially smaller memory footprint.
+\subsection{Implementation}
+
+We implemented Method C using the \texttt{llm-compressor} library \cite{llmcompressor2024} (formerly the vLLM compressor) on an NVIDIA H100 GPU. The goal was to mirror the FP8 deployment format used by Qwen while keeping the adapted model as faithful as possible after quantization. To that end, we applied fine-grained FP8 quantization in the E4M3 format with Block-128 sub-blocking, which estimates scale and bias parameters locally rather than at the level of an entire tensor, thereby better preserving weight statistics \cite{micikevicius2022fp8, xiao2023smoothquant}.
+
+The resulting configuration can be summarized as follows:
+
+\begin{itemize}
+    \item \textbf{Quantization Format}: We quantized weights to FP8 E4M3 using a fine-grained blocked scheme.
+    \item \textbf{Block Size}: We used a block size of 128 to match the official Qwen3-FP8 tensor format and ensure compatibility with existing tooling.
+    \item \textbf{Calibration Protocol}: Instead of calibrating on short context windows (e.g., 512 or 1024 tokens), we deliberately prioritized full-trajectory calibration in order to capture long-context activation outliers that occur in biomedical multi-step reasoning.
+    \begin{itemize}
+        \item \textbf{Sampling Strategy}: We performed stratified random sampling across all 10 Eval1 tasks to maintain balanced coverage (approximately 12--13 samples per task), restricted to successful trajectories.
+        \item \textbf{Volume}: This produced a calibration set of 123 full-context instances totaling 3{,}163{,}274 tokens.
+        \item \textbf{Context Depth}: The mean sample length was 25{,}718 tokens (77{,}603 characters), and the longest contexts reached 75{,}508 tokens. This ``deep calibration'' was intended to yield FP8 scaling factors that remain stable under the activation patterns induced by long, structured reasoning traces, substantially exceeding typical calibration practice.
+    \end{itemize}
+    \item \textbf{Excluded Layers}: We excluded \texttt{lm\_head} from FP8 quantization and retained it in higher precision for stability.
+\end{itemize}
+
+The quantization recipe used was:
+
+\begin{lstlisting}[language=Python]
+# Configuring FP8 Recipe (Block Size 128)
+recipe = QuantizationModifier(
+    targets="Linear",
+    scheme="FP8",
+    ignore=["lm_head"]
+)
+\end{lstlisting}
+
+This setup uses fine grained FP8 quantization with Block 128 granularity for all linear layers except the language model head. Each weight matrix is partitioned into contiguous blocks of 128 elements along the quantization dimension, and a separate scale, and a bias when applicable, is computed for each block. Because the quantization parameters are estimated per block rather than per tensor, the procedure follows local changes in weight statistics across the matrix more closely than per tensor quantization. The format matches the official Qwen3 32B FP8 release, which ensures compatibility and improves accuracy.
+For comparison, we also evaluated an INT8 quantized version of R0 32B from HuggingFace. That model uses standard per tensor INT8 quantization \cite{biomni_r0_32b_preview_gguf}, a common \texttt{llm-compressor} baseline, and provides a reference point for assessing the effect of Block 128 FP8 quantization.
+\section{Evaluation Framework}
+
+\subsection{Eval1 Benchmark}% Discuss how many questions are in the eval1 and their statistics. 
+We evaluate all methods on Eval1, a biomedical reasoning benchmark from the Biomni Project \cite{biomni_eval1}. Eval1 has 433 questions in 10 task categories and covers a range of biomedical settings and reasoning demands. It is not designed mainly for factual recall. Many questions require multiple reasoning steps, and some involve simulated tools or database style resources before the final answer is produced.
+\subsection{Evaluation Metrics}
+
+We report the following metrics:
+
+\begin{itemize}
+    \item \textbf{Accuracy}: Percentage of correct answers across all 433 questions
+    \item \textbf{Retention Percentage}: $\frac{\text{Accuracy}_{method}}{\text{Accuracy}_{baseline}} \times 100\%$
+    \item \textbf{Per-Task Breakdown}: Performance on each of the 10 task categories
+    \item \textbf{Memory Footprint}: Model size in GB
+\end{itemize}
+
+\subsection{Inference Configuration}
+
+All models are evaluated using vLLM \cite{kwon2023efficient} with the following configuration:
+
+\begin{itemize}
+    \item \textbf{Temperature}: 0.6 (temperature sampling)
+    \item \textbf{Max Tokens}: 32,768 (to accommodate full reasoning trajectories)
+    \item \textbf{Max Model Length}: 65,536 (2x the 32K base)
+    \item \textbf{Max Number of Batched Tokens}: 32,768 (half of max for batching efficiency)
+    \item \textbf{Top-p}: 0.95
+    \item \textbf{Top-k}: 20
+    \item \textbf{GPU}: 4$\times$ NVIDIA A100 80GB / H100 94GB
+\end{itemize}
+
+\subsection{Multi-GPU Deployment with Load Balancing}
+
+To run the 433 Eval1 questions in parallel, we deployed four separate vLLM server instances, each assigned to a different GPU. Each server was started with LoRA support enabled:
+
+\begin{lstlisting}[language=bash, caption=vLLM Server Launch (per GPU)]
+CUDA_DEVICES=0 python -m vllm.entrypoints.openai.api_server \
+    --model $MODEL_PATH \
+    --port 8000 \
+    --dtype bfloat16 \
+    --max-model-len 65536 \
+    --enable-lora \
+    --max-lora-rank 256 \
+    --lora-modules $LORA_NAME=$LORA_PATH \
+    --gpu-memory-utilization 0.90 \
+    --rope-scaling '{"rope_type":"yarn","factor":2.0, \
+        "original_max_position_embeddings":32768}' \
+    --max-num-batched-tokens 32768
+\end{lstlisting}
+
+A custom load balancer distributed requests across four backends on ports 8000 to 8003. It monitored the number of in flight requests per backend and routed each new request to the backend with the shortest queue, which avoided overloading a single GPU:
+\begin{lstlisting}[language=Python, caption=Least-Loaded Backend Selection]
+def get_least_loaded_backend():
+    """Select backend with fewest in-flight requests."""
+    with state_lock:
+        healthy = [b for b in BACKENDS 
+                   if backend_state[b]["status"] == "healthy"]
+        candidates = healthy if healthy else BACKENDS
+        min_backend = min(candidates, 
+                    key=lambda b: backend_state[b]["in_flight"])
+        backend_state[min_backend]["in_flight"] += 1
+        return min_backend
+\end{lstlisting}
+
+This setup allowed concurrent evaluation and failover. If a backend stopped responding, the load balancer sent new requests to the remaining healthy instances.
+\subsection{Client-Side Parallel Request Dispatch}
+On the client side, we used a multiprocess asynchronous evaluation framework to maximize throughput. It spawns 18 worker processes, and each worker maintains 4 concurrent requests using Python's \texttt{asyncio}, for a theoretical peak of 72 simultaneous agent runs:
+\begin{lstlisting}[language=Python, caption=Multi-Process Async Configuration]
+NUM_PROCESSES = 18
+ASYNC_CONCURRENCY_PER_PROCESS = 4
+
+async def run_evaluation_for_process(process_id, instance_queue):
+    evaluator = BiomniR0EvaluatorB1(process_id)
+    semaphore = asyncio.Semaphore(ASYNC_CONCURRENCY_PER_PROCESS)
+    
+    async def process_with_semaphore(instance):
+        async with semaphore:
+            result = await evaluator.process_instance(instance)
+            evaluator.save_result_and_update_stats(result)
+    
+    # Process instances from shared queue
+    while not instance_queue.empty():
+        instance = instance_queue.get_nowait()
+        if evaluator.try_claim_instance(instance['instance_id']):
+            asyncio.create_task(process_with_semaphore(instance))
+\end{lstlisting}
+
+The design incorporates several reliability features:
+\begin{itemize}
+    \item \textbf{Atomic instance claiming}: A file-lock mechanism prevents duplicate processing when multiple processes attempt to claim the same instance.
+    \item \textbf{Incremental persistence}: Results are written to disk immediately after each completion, ensuring no data loss on crashes.
+    \item \textbf{Resumable execution}: Previously processed instances are skipped on restart, enabling long evaluations to be paused and resumed.
+\end{itemize}
+
+\section{Experimental Predictions}
+
+Based on the Orthogonality Hypothesis, we make the following predictions:
+
+\begin{enumerate}
+    \item \textbf{Method A (Naive Transfer)}: Should achieve $>95\%$ retention because quantization noise is orthogonal to semantic adaptation.
+    
+    \item \textbf{Method B (Corrective Extraction)}: May fail ($<80\%$ retention) because the rank-256 adapter lacks capacity to encode both semantic knowledge and high-rank quantization correction.
+    
+    \item \textbf{Method C (Direct Quantization)}: Should achieve $>90\%$ retention because quantization is applied after adaptation with domain-specific calibration, though some degradation is expected from the quantization process itself.
+\end{enumerate}
+The results for these predictions are analyzed in Chapter 4. The discussion for the results and the hypothesis are in Chapter 5.

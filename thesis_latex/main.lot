@@ -1,0 +1,11 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.1}{\ignorespaces \textbf {Selected High-Impact Biomni Tools}}}{8}{table.2.1}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Weight and scale tensor shapes revealing Block-128 quantization}}{18}{table.3.1}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Performance comparison on Eval1 (433 questions). Method A achieves statistical parity with the baseline (44.6\% vs.\ 44.5\%) with $\sim $37.5\% memory reduction. Acc.\ = Accuracy, Ret.\ = Retention.}}{27}{table.4.1}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Per-task performance breakdown across all model configurations. Method A preserves baseline-level performance across most categories, whereas Method B degrades consistently. The unadapted Qwen3-32B-BF16 base model highlights the importance of domain adaptation.}}{29}{table.4.2}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Memory footprint comparison. Method A reduces total size by 37.5\% while preserving baseline performance. Method C reduces size by 50\% with an 7\% performance degradation in retention.}}{31}{table.4.3}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }

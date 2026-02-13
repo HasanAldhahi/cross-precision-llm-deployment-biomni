@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Academic Poster: LoRA Surgery & Knowledge Grafting</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --primary-teal: #16a085;
+            --base-pink: #eb4d4b;
+            --fp8-purple: #6c5ce7;
+            --lora-gold: #c09600;
+            --tumor-red: #d63031;
+            --text-gray: #2d3436;
+        }
+
+        body {
+            background-color: #f4f7f6;
+            font-family: 'Times New Roman', Times, serif; /* Academic feel */
+            margin: 0; padding: 30px;
+            display: flex; justify-content: center;
+        }
+
+        .poster-canvas {
+            width: 1750px;
+            background: white;
+            padding: 50px;
+            border-radius: 5px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: 1fr 1.3fr 0.8fr;
+            gap: 40px;
+        }
+
+        .header {
+            grid-column: span 3;
+            border-bottom: 3px double #333;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        h1 { font-size: 3.5rem; margin: 0; font-family: 'Garamond', serif; text-transform: uppercase; }
+        .authors { font-size: 1.2rem; margin-top: 10px; color: #636e72; }
+
+        .col-header {
+            font-family: sans-serif;
+            font-weight: 900; color: #95a5a6;
+            text-transform: uppercase; letter-spacing: 3px;
+            font-size: 0.9rem; margin-bottom: 30px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        /* --- COLUMN 1: THEORETICAL FOUNDATION --- */
+        .math-header {
+            background: #2d3436; color: #fff;
+            font-family: sans-serif; font-size: 1.1rem;
+            padding: 4px 12px; display: inline-block; margin-bottom: 15px;
+        }
+
+        .formula-row {
+            display: flex; align-items: center; justify-content: flex-start;
+            margin-bottom: 35px; gap: 8px;
+        }
+
+        .parenthesis { font-size: 6rem; font-weight: 100; color: #ccc; line-height: 0.8; }
+        .operator { font-size: 2.5rem; font-weight: bold; margin: 0 10px; }
+        .arrow-math { font-size: 2.5rem; color: #bdc3c7; margin: 0 15px; }
+
+        .brain-unit { display: flex; flex-direction: column; align-items: center; text-align: center; width: 110px; }
+        .label-gb { font-size: 1.5rem; font-weight: 900; }
+        .brain-img { width: 100px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1)); }
+        .label-sub { font-size: 0.6rem; color: #636e72; font-weight: bold; margin-top: 5px; }
+
+        /* Brain Colors */
+        .ft-brain { filter: hue-rotate(110deg) saturate(1.4); }
+        .base-brain { filter: hue-rotate(320deg); }
+        .quant-brain { width: 75px; filter: hue-rotate(240deg); }
+        .dequant-brain { filter: hue-rotate(110deg) opacity(0.3) grayscale(0.6); }
+
+        .lora-snippet {
+            width: 80px; height: 80px;
+            background-image: url('brain.png'); background-size: 220px; background-position: center;
+            border-radius: 50%; border: 3px solid var(--lora-gold);
+            filter: hue-rotate(50deg) saturate(1.5);
+        }
+
+        .tumor {
+            position: absolute; top: 35%; left: 45%; width: 45px; height: 35px;
+            background: radial-gradient(circle, var(--tumor-red) 0%, transparent 70%);
+            border-radius: 50%; filter: blur(5px); animation: pulseTumor 2s infinite;
+        }
+        @keyframes pulseTumor { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+
+        /* --- COLUMN 2: SURGICAL PROTOCOLS --- */
+        .surgical-card {
+            border: 1px solid #ddd; border-radius: 8px;
+            padding: 25px; margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .method-label { font-family: sans-serif; font-weight: 900; text-transform: uppercase; font-size: 1.2rem; margin-bottom: 10px; display: block; }
+        
+        .protocol-text { font-size: 0.95rem; line-height: 1.5; color: #2d3436; margin-bottom: 15px; }
+        .clinical-note { 
+            background: #f9f9f9; border-left: 4px solid #95a5a6; 
+            padding: 10px; font-size: 0.8rem; font-family: sans-serif; 
+        }
+
+        .mini-math { 
+            background: #fff; border: 1px solid #eee; padding: 10px; 
+            border-radius: 5px; text-align: center; margin: 15px 0;
+            font-size: 1.1rem;
+        }
+
+        /* --- COLUMN 3: THEORY & AGENT --- */
+        .node { 
+            background: #f1f2f6; border: 2px solid #6c5ce7; border-radius: 10px; 
+            padding: 12px; margin: 10px 0; text-align: center; font-family: sans-serif; font-weight: 900; 
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="poster-canvas">
+    
+    <div class="header">
+        <h1>LoRA Surgery: <b>Knowledge Grafting</b> into Quantized LLMs</h1>
+        <div class="authors">Surgical Extraction of Biomedical Intelligence from BF16 Donors to FP8 Targets</div>
+    </div>
+
+    <!-- COLUMN 1: FUNDAMENTAL THEORY -->
+    <div class="column">
+        <div class="col-header">01. Theoretical Foundation</div>
+        
+        <div class="math-header">SEMANTIC EXTRACTION</div>
+        <div class="formula-row">
+            <span class="parenthesis">(</span>
+            <div class="brain-unit">
+                <span class="label-gb">64G</span>
+                <img src="brain.png" class="brain-img ft-brain">
+                <span class="label-sub">Qwen-32B (FT)</span>
+            </div>
+            <span class="operator">−</span>
+            <div class="brain-unit">
+                <span class="label-gb">64G</span>
+                <img src="brain.png" class="brain-img base-brain">
+                <span class="label-sub">Qwen-32B (BASE)</span>
+            </div>
+            <span class="parenthesis">)</span>
+            <span class="arrow-math">→</span>
+            <div class="brain-unit">
+                <div class="lora-snippet"></div>
+                <span class="label-sub" style="color:var(--lora-gold)">ΔW SEMANTIC</span>
+            </div>
+        </div>
+
+        <div class="math-header">FP8 QUANTIZATION (llm-compressor)</div>
+        <div class="formula-row">
+            <div class="brain-unit">
+                <img src="brain.png" class="brain-img ft-brain">
+            </div>
+            <span class="operator">÷ Scale</span>
+            <span class="arrow-math">→</span>
+            <div class="brain-unit">
+                <span class="label-gb" style="color:var(--fp8-purple)">32G</span>
+                <img src="brain.png" class="brain-img quant-brain">
+                <span class="label-sub">FP8 E4M3</span>
+            </div>
+        </div>
+
+        <div class="math-header">DEQUANTIZATION ANOMALY</div>
+        <div class="formula-row" style="background: #fffcfc; border-radius: 10px; padding: 10px 0;">
+            <div class="brain-unit">
+                <img src="brain.png" class="brain-img quant-brain">
+            </div>
+            <span class="operator">× Scale</span>
+            <span class="arrow-math">→</span>
+            <div class="brain-unit">
+                <div style="position:relative">
+                    <div class="tumor"></div>
+                    <img src="brain.png" class="brain-img dequant-brain">
+                </div>
+                <span class="label-sub" style="color:var(--tumor-red)">ANOMALY \(N_{q}\)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- COLUMN 2: SURGICAL PROTOCOLS -->
+    <div class="column">
+        <div class="col-header">02. Surgical Protocols</div>
+
+        <!-- PROTOCOL A -->
+        <div class="surgical-card" style="border-top: 6px solid var(--lora-gold);">
+            <span class="method-label" style="color:var(--lora-gold)">Protocol A: Naive Transfer</span>
+            <div class="protocol-text">
+                Direct grafting of the high-precision BF16 semantic adapter to the FP8 base model. This assumes the quantization noise is negligible.
+            </div>
+            <div class="mini-math">\[ W_{inf} = W_{FP8} + (B \cdot A)_{BF16} \]</div>
+            <div class="clinical-note">
+                <b>Note:</b> Optimal for initial deployment. Mixed-precision kernels handle the BF16 adapter addition during the forward pass.
+            </div>
+        </div>
+
+        <!-- PROTOCOL B -->
+        <div class="surgical-card" style="border-top: 6px solid var(--fp8-purple); background: #fdfcff;">
+            <span class="method-label" style="color:var(--fp8-purple)">Protocol B: Corrective Extraction</span>
+            <div class="protocol-text">
+                Extraction is performed against the <b>Dequantized Base</b> to internalize the quantization error \(N_q\) into the adapter weights.
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:10px; justify-content:center; margin: 15px 0;">
+                <span style="font-size:0.8rem; font-weight:bold;">PROCEDURE:</span>
+                <span class="parenthesis" style="font-size:3rem">(</span>
+                <div class="brain-unit" style="width:60px;"><img src="brain.png" class="brain-img quant-brain" style="width:50px;"></div>
+                <span style="font-size:1.5rem;">× S</span>
+                <span class="parenthesis" style="font-size:3rem">)</span>
+                <span style="font-size:1.5rem;">−</span>
+                <div class="brain-unit" style="width:60px;"><img src="brain.png" class="brain-img ft-brain" style="width:60px;"></div>
+                <span style="font-size:1.5rem;">→</span>
+                <div class="lora-snippet" style="width:50px; height:50px; background-size:130px;"></div>
+            </div>
+
+            <div class="mini-math">
+                \[ L_{corr} = \Delta W_{semantic} - N_{quant} \]
+            </div>
+            <div class="clinical-note" style="border-left-color: var(--tumor-red);">
+                <b>Double Burden Hypothesis:</b> The adapter capacity is split between domain knowledge and error correction.
+            </div>
+        </div>
+
+        <!-- PROTOCOL C -->
+        <div class="surgical-card" style="border-top: 6px solid #b2bec3;">
+            <span class="method-label" style="color:#636e72">Protocol C: Direct Quantization</span>
+            <div class="protocol-text">
+                Standard Post-Training Quantization (PTQ) baseline using block-wise quantization scales sampled from 123 stratified trajectories.
+            </div>
+            <div class="mini-math">\[ W_{C} = \text{Quant}_{FP8}(W_{BF16}^{ft}) \]</div>
+            <div class="clinical-note">
+                <b>Requirement:</b> Compute Capability 9.0 (NVIDIA Hopper) via <i>llm-compressor</i>.
+            </div>
+        </div>
+    </div>
+
+    <!-- COLUMN 3: AGENTIC INTEGRATION -->
+    <div class="column">
+        <div class="col-header">03. System Evaluation</div>
+
+        <div style="margin-bottom: 40px;">
+            <div class="math-header" style="background:var(--fp8-purple)">BIOMNI AGENT WORKFLOW</div>
+            <div class="node">__start__</div>
+            <div style="text-align:center;">↓</div>
+            <div class="node" style="background:white;">generate</div>
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+                <div style="flex:1"><div style="text-align:center;">↙</div><div class="node">execute</div></div>
+                <div style="flex:1"><div style="text-align:center;">↘</div><div class="node">self_critic</div></div>
+            </div>
+            <div style="text-align:center;">↓</div>
+            <div class="node" style="background:var(--fp8-purple); color:white;">__end__</div>
+        </div>
+
+        <div class="math-header">ORTHOGONALITY THEORY</div>
+        <div style="width: 100%; height: 160px; border-left: 2px solid #333; border-bottom: 2px solid #333; position: relative; margin-top: 20px;">
+            <div style="position:absolute; bottom:0; left:0; width:3px; height:100px; background:var(--lora-gold);"></div>
+            <div style="position:absolute; bottom:0; left:0; height:3px; width:100px; background:var(--tumor-red);"></div>
+            <span style="position:absolute; top:-20px; left:10px; color:var(--lora-gold); font-size:0.7rem; font-weight:bold; font-family:sans-serif;">KNOWLEDGE \(\Delta W\)</span>
+            <span style="position:absolute; bottom:10px; right:-20px; color:var(--tumor-red); font-size:0.7rem; font-weight:bold; font-family:sans-serif;">NOISE \(N_q\)</span>
+        </div>
+        <p style="font-size: 0.9rem; margin-top: 30px; font-style: italic;">
+            "We hypothesize that semantic deltas and quantization noise exist in nearly <b>orthogonal subspaces</b>, allowing for additive knowledge recovery."
+        </p>
+        <div style="text-align: center; border-top: 1px solid #eee; padding-top: 15px; font-size: 1.2rem;">
+            \( \langle \Delta W, N_{quant} \rangle \approx 0 \)
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

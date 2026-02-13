@@ -1,0 +1,145 @@
+\contentsline {chapter}{Abstract}{i}{chapter*.1}%
+\contentsline {chapter}{Acknowledgements}{iii}{chapter*.3}%
+\contentsline {chapter}{List of Figures}{vii}{chapter*.5}%
+\contentsline {chapter}{List of Tables}{viii}{chapter*.6}%
+\contentsline {chapter}{List of Listings}{ix}{chapter*.7}%
+\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Motivation}{1}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}The Resource-Efficient Deployment Challenge}{1}{subsection.1.1.1}%
+\contentsline {section}{\numberline {1.2}Problem Statement}{2}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Research Questions}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Research Contributions}{2}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Thesis Structure}{3}{section.1.5}%
+\contentsline {chapter}{\numberline {2}Background}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Large Language Models and Memory Constraints}{4}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Post-Training Quantization}{5}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}FP8 Floating-Point Format}{5}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Block-wise Quantization}{5}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Dequantization}{5}{subsection.2.2.3}%
+\contentsline {section}{\numberline {2.3}Low-Rank Adaptation (LoRA)}{6}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Mathematical Formulation}{6}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Connection to Singular Value Decomposition}{6}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Rank Selection and Capacity}{6}{subsection.2.3.3}%
+\contentsline {section}{\numberline {2.4}The Biomni Project}{7}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Biomni-R0-32B Model}{9}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}Eval1 Benchmark}{9}{subsection.2.4.2}%
+\contentsline {subsection}{\numberline {2.4.3}Agentic Workflow Architecture Biomni-A1}{10}{subsection.2.4.3}%
+\contentsline {subsection}{\numberline {2.4.4}Configuration of Self-Critic}{10}{subsection.2.4.4}%
+\contentsline {section}{\numberline {2.5}The Orthogonality Hypothesis}{11}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Theoretical Justification}{11}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Orthogonality Argument}{11}{subsection.2.5.2}%
+\contentsline {subsection}{\numberline {2.5.3}Theoretical Formalization of Subspace Orthogonality}{12}{subsection.2.5.3}%
+\contentsline {subsubsection}{Definitions in Weight Space}{12}{subsubsection*.8}%
+\contentsline {subsubsection}{The Orthogonality Condition}{12}{subsubsection*.9}%
+\contentsline {subsubsection}{Impact on Forward Pass}{12}{subsubsection*.10}%
+\contentsline {subsubsection}{Preservation of Semantic Direction}{13}{subsubsection*.11}%
+\contentsline {subsection}{\numberline {2.5.4}Implications for Transfer Methods}{13}{subsection.2.5.4}%
+\contentsline {section}{\numberline {2.6}Related Work}{13}{section.2.6}%
+\contentsline {subsection}{\numberline {2.6.1}Efficient Deployment and FP8 Quantization}{14}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.2}PEFT and the Training-Inference Gap}{14}{subsection.2.6.2}%
+\contentsline {subsection}{\numberline {2.6.3}Orthogonality and Biomedical Adaptation}{14}{subsection.2.6.3}%
+\contentsline {chapter}{\numberline {3}Methodology}{15}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Experimental Design Overview}{15}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Baseline: Biomni-R0-32B (BF16)}{15}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Method A: Naive Transfer}{16}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Conceptual Approach}{16}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Mathematical Formulation}{16}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Hypothesis}{17}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Implementation}{17}{subsection.3.3.4}%
+\contentsline {section}{\numberline {3.4}Method B: Corrective Extraction}{17}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Conceptual Approach}{17}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Mathematical Formulation}{17}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Hypothesis}{18}{subsection.3.4.3}%
+\contentsline {subsection}{\numberline {3.4.4}Implementation}{18}{subsection.3.4.4}%
+\contentsline {subsubsection}{Step 1: Tensor Reconstruction (The Bridge Model)}{18}{subsubsection*.12}%
+\contentsline {subsubsection}{Step 2: Statistical Verification (The Autopsy Protocol)}{19}{subsubsection*.13}%
+\contentsline {subsubsection}{Step 3: LoRA Extraction and Sanitization}{20}{subsubsection*.14}%
+\contentsline {section}{\numberline {3.5}Method C: Direct Quantization}{20}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Conceptual Approach}{20}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Mathematical Formulation}{21}{subsection.3.5.2}%
+\contentsline {subsection}{\numberline {3.5.3}Hypothesis}{21}{subsection.3.5.3}%
+\contentsline {subsection}{\numberline {3.5.4}Implementation}{21}{subsection.3.5.4}%
+\contentsline {section}{\numberline {3.6}Evaluation Framework}{22}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Eval1 Benchmark}{22}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Evaluation Metrics}{22}{subsection.3.6.2}%
+\contentsline {subsection}{\numberline {3.6.3}Inference Configuration}{22}{subsection.3.6.3}%
+\contentsline {subsection}{\numberline {3.6.4}Multi-GPU Deployment with Load Balancing}{23}{subsection.3.6.4}%
+\contentsline {subsection}{\numberline {3.6.5}Client-Side Parallel Request Dispatch}{23}{subsection.3.6.5}%
+\contentsline {section}{\numberline {3.7}Experimental Predictions}{24}{section.3.7}%
+\contentsline {chapter}{\numberline {4}Results}{25}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Evaluation Setup}{25}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}Hardware and Software Configuration}{25}{subsection.4.1.1}%
+\contentsline {section}{\numberline {4.2}Robust Response Annotation Protocol}{25}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Step 1: Heuristic Extraction}{26}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}Step 2: LLM-as-a-Judge Evaluation}{26}{subsection.4.2.2}%
+\contentsline {subsection}{\numberline {4.2.3}Step 3: Human Verification and Web Search}{26}{subsection.4.2.3}%
+\contentsline {subsection}{\numberline {4.2.4}Step 4: Final Aggregation}{27}{subsection.4.2.4}%
+\contentsline {section}{\numberline {4.3}Quantitative Performance Results}{27}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Overall Performance Comparison}{27}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Performance Visualization}{28}{subsection.4.3.2}%
+\contentsline {subsection}{\numberline {4.3.3}Per-Task Performance Breakdown}{28}{subsection.4.3.3}%
+\contentsline {section}{\numberline {4.4}Method Comparison Analysis}{29}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Method A vs. Baseline}{29}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Method B Failure Analysis}{29}{subsection.4.4.2}%
+\contentsline {subsection}{\numberline {4.4.3}Method C Results}{30}{subsection.4.4.3}%
+\contentsline {section}{\numberline {4.5}Computational Efficiency}{31}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}Memory Footprint}{31}{subsection.4.5.1}%
+\contentsline {section}{\numberline {4.6}Summary of Results}{31}{section.4.6}%
+\contentsline {chapter}{\numberline {5}Discussion}{32}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Why Naive Transfer Succeeded}{32}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}Empirical Evidence for Orthogonality}{32}{subsection.5.1.1}%
+\contentsline {subsection}{\numberline {5.1.2}Interpretation of Orthogonality Results}{33}{subsection.5.1.2}%
+\contentsline {subsection}{\numberline {5.1.3}Low-Rank Structure vs. High-Rank Noise}{33}{subsection.5.1.3}%
+\contentsline {section}{\numberline {5.2}The Limits of Orthogonality: An INT4 Case Study}{34}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}The Magnitude Paradox}{34}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Geometric Isolation}{35}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Independence of Quantization Errors}{36}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}Empirical Validation of Low-Rank Structure}{36}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Extraction as an Implicit Test}{36}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Implications for Intrinsic Dimensionality}{37}{subsection.5.3.2}%
+\contentsline {section}{\numberline {5.4}Why Corrective Extraction Failed}{37}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}vLLM Sanitization Constraints}{37}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}The Dual-Objective Problem}{38}{subsection.5.4.2}%
+\contentsline {subsection}{\numberline {5.4.3}Capacity Saturation}{38}{subsection.5.4.3}%
+\contentsline {subsection}{\numberline {5.4.4}Evidence from Performance Analysis}{38}{subsection.5.4.4}%
+\contentsline {section}{\numberline {5.5}Comparison with Direct Quantization}{38}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Quantization Degradation}{39}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}Method A vs.\ Method C}{39}{subsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.5.3}Knowledge Concentration Principle}{39}{subsection.5.5.3}%
+\contentsline {section}{\numberline {5.6}Resource-Efficient Deployment Architecture}{39}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}The Chat AI Service Context}{39}{subsection.5.6.1}%
+\contentsline {subsection}{\numberline {5.6.2}vLLM Multi-Adapter Solution}{40}{subsection.5.6.2}%
+\contentsline {subsection}{\numberline {5.6.3}Practical Benefits}{40}{subsection.5.6.3}%
+\contentsline {section}{\numberline {5.7}Engineering Lessons}{40}{section.5.7}%
+\contentsline {subsection}{\numberline {5.7.1}Format Verification Pipeline}{40}{subsection.5.7.1}%
+\contentsline {subsection}{\numberline {5.7.2}Library Considerations}{41}{subsection.5.7.2}%
+\contentsline {section}{\numberline {5.8}Limitations}{41}{section.5.8}%
+\contentsline {subsection}{\numberline {5.8.1}Single Model Family}{41}{subsection.5.8.1}%
+\contentsline {subsection}{\numberline {5.8.2}Single Domain}{41}{subsection.5.8.2}%
+\contentsline {subsection}{\numberline {5.8.3}Single Quantization Format}{41}{subsection.5.8.3}%
+\contentsline {subsection}{\numberline {5.8.4}Fixed Rank}{41}{subsection.5.8.4}%
+\contentsline {subsection}{\numberline {5.8.5}Benchmark Specificity}{41}{subsection.5.8.5}%
+\contentsline {section}{\numberline {5.9}Threats to Validity}{41}{section.5.9}%
+\contentsline {subsection}{\numberline {5.9.1}Measurement Variability}{41}{subsection.5.9.1}%
+\contentsline {subsection}{\numberline {5.9.2}Cosine Similarity Interpretation}{41}{subsection.5.9.2}%
+\contentsline {subsection}{\numberline {5.9.3}Generalization}{42}{subsection.5.9.3}%
+\contentsline {subsection}{\numberline {5.9.4}Systemic Transparency and Agentic Logic}{42}{subsection.5.9.4}%
+\contentsline {chapter}{\numberline {6}Conclusion}{43}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Summary of Contributions}{43}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Empirical Support for the Orthogonality Hypothesis}{43}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2}Comparative Analysis of Transfer Methods}{43}{subsection.6.1.2}%
+\contentsline {subsection}{\numberline {6.1.3}Resource-Efficient Deployment Architecture}{44}{subsection.6.1.3}%
+\contentsline {section}{\numberline {6.2}Practical Impact}{44}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}Enabling Efficient Deployment}{44}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Recommended Workflow}{44}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}Code Availability}{45}{subsection.6.2.3}%
+\contentsline {subsection}{\numberline {6.2.4}Infrastructure Sharing}{45}{subsection.6.2.4}%
+\contentsline {section}{\numberline {6.3}Future Work}{45}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Generalization to Other Quantization Formats}{45}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Extension to Other Domains}{45}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Theoretical Analysis of Orthogonality Conditions}{45}{subsection.6.3.3}%
+\contentsline {subsection}{\numberline {6.3.4}Higher-Rank Adapters for Corrective Extraction}{45}{subsection.6.3.4}%
+\contentsline {subsection}{\numberline {6.3.5}Extension to Other Model Families}{46}{subsection.6.3.5}%
+\contentsline {subsection}{\numberline {6.3.6}Multi-Adapter Scenarios}{46}{subsection.6.3.6}%
+\contentsline {section}{\numberline {6.4}Closing Remarks}{46}{section.6.4}%
+\contentsline {chapter}{Bibliography}{47}{chapter*.15}%

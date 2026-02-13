@@ -1,0 +1,408 @@
+\chapter{Background}
+This chapter covers the background for studying LoRA updates across different numerical precisions. It starts with large language models and why memory use becomes a limiting factor at scale. It then describes post training quantization, focusing on FP8 and block wise approaches. Next, it explains Low Rank Adaptation as a practical method for fine tuning. The chapter also states the Orthogonality Hypothesis in mathematical form and summarizes the Biomni project and the Eval1 benchmark used in the experiments.
+\section{Large Language Models and Memory Constraints}
+Transformer based large language models \cite{vaswani2017attention} achieve strong results on many natural language understanding tasks, including reasoning and problem solving. Models such as GPT-3 \cite{brown2020language}, LLaMA \cite{touvron2023llama}, and Qwen \cite{yang2025qwen3} rely on very large parameter counts, ranging from billions to trillions, which provide the capacity behind their performance.
+Consequently, the hardware overhead for hosting these systems is extraordinarily high.  Given a model with $N$ parameters held in $b$-bit precision, the baseline memory demand stands at:
+\begin{equation}
+M_{model} = N \times \frac{b}{8} \text{ bytes}
+\end{equation}
+
+For Qwen3-32B in BF16 (16-bit) precision:
+
+\begin{equation}
+M_{model} = 32 \times 10^9 \times \frac{16}{8} = 64 \text{ GB}
+\end{equation}
+
+This exceeds the capacity of consumer GPUs with 8-24 GB of VRAM and requires expensive datacenter hardware. During inference, memory must be allocated for activations known as the KV cache. This memory is used for attention mechanisms and intermediate computations for efficient computation. Since the model is computing the next tokens based on the previous tokens in auto-regressive manner, the KV cache is used for keeping track of the previous tokens both key and value tensors to avoid recomputing them at each new token to be generated. KV cache increases further the total memory footprint.
+The solution to this problem is to use Post-Training Quantization (PTQ) \cite{gholami2021survey} to reduce the bit precision of model weights and activations to be able to free more VRAM to be used in such overhead of KV cache and as well as increasing batch processing and sequence length, boosting throughput and lowering latency for token generation during inference.
+\section{Post-Training Quantization}
+
+Post-Training Quantization (PTQ) reduces the bit precision of model weights and activations without demanding a retrain \cite{gholami2021survey}. Unlike Quantization-Aware Training (QAT), which blends quantization into the training loop, PTQ works on ready-made models, rendering it more viable for massive models where retraining is too costly or time-consuming. It requires a calibration dataset for determining the scale and bias parameters for the quantization. Most of the frameworks for PTQ require a calibration dataset which is taken as industry standard \cite{gholami2021survey}. Even though in the documentation it says it is not required to provide a calibration dataset, our domain specific application is specific and sticking to the industry standard is more robust and reliable.
+In the next subsections, we will discuss these concepts thoroughly on how PTQ FP8 quantization works and most notably Block-wise Quantization which is the one used for the Qwen3-32B model to quantize it into FP8 precision from the original authors of Alibaba Cloud.
+\subsection{FP8 Floating-Point Format}
+
+The IEEE FP8 standard \cite{micikevicius2022fp8} defines two 8-bit floating-point formats:
+
+\begin{itemize}
+    \item \textbf{E4M3} (4 exponent bits, 3 mantissa bits): Provides higher precision but limited dynamic range, typically used for weights
+    \item \textbf{E5M2} (5 exponent bits, 2 mantissa bits): Provides wider dynamic range but lower precision, typically used for activations and gradients
+\end{itemize}
+
+The E4M3 format values range is $[-448, 448]$ with varying precision depending on magnitude. Modern NVIDIA GPUs with compute capabilities of +8.9, like Hopper H100 and Ada Lovelace, provide native hardware acceleration for FP8 arithmetic, making it not only memory-efficient but also computationally fast.
+
+\subsection{Block-wise Quantization}
+
+Naive per-tensor quantization applies a single scale factor to all elements of a tensor:
+
+\begin{equation}
+W_{quantized} = \text{round}\left(\frac{W_{FP16}}{s}\right)
+\end{equation}
+
+where $s$ is a scalar scale factor. However, this approach performs poorly when weights have heterogeneous magnitudes across different regions of the tensor.
+
+Block-wise quantization \cite{xiao2023smoothquant} divides tensors into blocks and applies separate scale factors to each block:
+
+\begin{equation}
+W_{quantized}[i,j] = \text{round}\left(\frac{W_{FP16}[i,j]}{s[b_i, b_j]}\right)
+\end{equation}
+
+where $b_i, b_j$ are the block indices corresponding to position $(i,j)$. For a weight matrix of shape $(H, W)$ with block size $B$, the scale tensor has shape $(\lceil H/B \rceil, \lceil W/B \rceil)$.
+
+The Qwen-FP8 implementation uses Block-128 quantization (also known as fine-grained FP8 quantization), meaning each block contains 128 elements along the quantization dimension. This block size is documented in the official Qwen3 model card and provides a good balance between quantization accuracy and metadata overhead.
+
+\subsection{Dequantization}
+
+To perform arithmetic operations on quantized weights in higher precision, dequantization is required:
+
+\begin{equation}
+W_{FP16} = W_{FP8} \times s_{expanded}
+\end{equation}
+
+where $s_{expanded}$ is the scale tensor expanded to match the shape of $W_{FP8}$ by repeating each scale value along the appropriate dimension.
+
+\section{Low-Rank Adaptation (LoRA)}
+
+Low-Rank Adaptation \cite{hu2021lora} is a parameter-efficient fine-tuning technique that freezes the pre-trained model weights and injects trainable low-rank decomposition matrices into each layer.
+
+\subsection{Mathematical Formulation}
+
+For a pre-trained weight matrix $W_0 \in \mathbb{R}^{d \times k}$, LoRA represents the weight update as:
+
+\begin{equation}
+W = W_0 + \Delta W = W_0 + BA
+\end{equation}
+
+where $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ with rank $r \ll \min(d, k)$. During training, $W_0$ is frozen and only $B$ and $A$ are updated.
+
+The number of trainable parameters is:
+
+\begin{equation}
+\text{Params}_{LoRA} = r \times (d + k)
+\end{equation}
+
+For typical values ($r=256$, $d=5120$, $k=5120$), this represents only $\sim$5\% of the original parameters.
+
+\subsection{Connection to Singular Value Decomposition}
+
+LoRA can be interpreted through the lens of Singular Value Decomposition (SVD). The full weight update $\Delta W$ can be decomposed as:
+
+\begin{equation}
+\Delta W = U \Sigma V^T
+\end{equation}
+
+where $\Sigma$ is a diagonal matrix of singular values. LoRA approximates this by keeping only the top $r$ singular values:
+
+\begin{equation}
+\Delta W \approx U_r \Sigma_r V_r^T
+\end{equation}
+
+This low-rank approximation is effective because task-specific adaptations often lie in a low-dimensional subspace \cite{aghajanyan2020intrinsic}.
+
+\subsection{Rank Selection and Capacity}
+
+The choice of rank $r$ represents a trade-off between expressiveness and parameter efficiency. Higher ranks can capture more complex adaptations but require more memory and computation. Empirically, ranks between 64 and 512 are commonly used for LLMs.
+
+Critically, the rank determines the \textit{capacity} of the adapter. If the adaptation task requires encoding information that cannot be compressed into rank $r$, the adapter will fail to learn effectively.
+
+
+\section{The Biomni Project}
+Biomni is a general-purpose AI agent platform developed at Stanford University with the goal of automating and accelerating biomedical research workflows across a broad range of subfields \cite{biomni2025}. 
+It is designed to operate as a 'virtual AI biologist' capable not only of answering questions, but also of designing, executing, and coordinating complex multi-step workflows that would normally require the guidance of expert human scientists. As opposed to conventional systems based on rigid templates, Biomni generates highly adaptable sequences of actions across genomics, transcriptomics, clinical informatics, and other fields. This is achieved by combining Large Language Model (LLM) reasoning with a sophisticated set of information retrieval and code execution tools to call upon software routines, build workflows, and interpret results dynamically.
+The innovation behind the Biomni is its agentic environment, Biomni-E1, in which over 150 specialized tools, 105 software packages, and 59 databases are directly accessible to the agent to support research problem solving and task automation. 
+The system integrates several tools for prediction, dataset retrieval, sequence and structure checks, and experiment planning. It can also generate and execute Python code. Since it connects to resources used in genomics, pharmacology, and systems biology, it can be applied to a range of projects.
+In practice, it relies on established databases such as AlphaFold protein structures, NCBI related to sequence data and alignment, and the GWAS Catalog which links between genetic variants and traits.
+The mixture of integrated resources and flexible agentic planning enables Biomni to carry out sophisticated biomedical analyses that would otherwise need extensive expert manual planning and coordination.
+The source model studied in this research, Biomni-R0-32B, is built upon this agentic platform. It is a large language model based on the Qwen3-32B architecture, further adapted and fine-tuned for biomedical reasoning. (Details of the model architecture and experimental evaluation follow below.)
+
+Table~\ref{tab:biomni_tools} presents a sample of high-impact tools available in Biomni-E1, each serving essential roles in biomedicine:
+
+\begin{table}[H]
+    \centering
+    \caption{\textbf{Selected High-Impact Biomni Tools}}
+    \label{tab:biomni_tools}
+    \small
+    \renewcommand{\arraystretch}{0.95}
+    
+    % Column definitions:
+    % 1. Tool Name: Fixed width (4.2cm), typewriter font, tiny size, allows wrapping
+    % 2. Category: Fixed width (2cm), allows wrapping
+    % 3 & 4. Function & Notes: X columns (fill remaining space automatically)
+    \begin{tabularx}{\textwidth}{
+        >{\raggedright\arraybackslash\ttfamily\scriptsize}p{4.2cm} 
+        >{\raggedright\arraybackslash}p{2.5cm} 
+        X 
+        X
+    }
+        \toprule
+        \textbf{\textrm{\normalsize Tool Name}} & \textbf{\normalsize Category} & \textbf{\normalsize Primary Function} & \textbf{\normalsize Notes / Cost} \\
+        \midrule
+        
+        advanced\_web\_search\_claude & 
+        \textbf{Web / Research} & 
+        Performs complex, reasoning-based web searches to retrieve up-to-date scientific information and verify facts using Claude models. & 
+        \textbf{Cost:} \$10.00 per 1,000 searches + Claude model token usage fees. \\
+        \addlinespace
+        
+        perform\_crispr\_cas9\_genome\ & 
+        \textbf{Bio Engineering} & 
+        Simulates the CRISPR-Cas9 process, including designing guide RNAs (gRNAs) and predicting editing outcomes for genomic loci. & 
+        Essential for gene editing experiment planning. \\
+        \addlinespace
+        
+        query\_alphafold & 
+        \textbf{Database} & 
+        Retrieves predicted 3D protein structures from the AlphaFold Database using UniProt accession IDs. & 
+        Provides structures for proteins lacking experimental data. \\
+        \addlinespace
+        
+        run\_diffdock\_with\_smiles & 
+        \textbf{Pharmacology} & 
+        Performs molecular docking of SMILES-format ligands to proteins using DiffDock. & 
+        Utilizes GPU acceleration for drug binding prediction. \\
+        \addlinespace
+        
+        annotate\_celltype\_scRNA & 
+        \textbf{Genomics} & 
+        Annotates cell types in scRNA-seq experiments using Leiden clustering and LLM-based reasoning. & 
+        Automates interpretation of single-cell transcriptomics. \\
+        \addlinespace
+        
+        perform\_flux\_balance\_analysis & 
+        \textbf{Systems Biology} & 
+        Runs Flux Balance Analysis (FBA) on metabolic networks to predict growth and product yields. & 
+        Standard for metabolic engineering and systems biology. \\
+        \addlinespace
+        
+        blast\_sequence & 
+        \textbf{Database} & 
+        Identifies DNA or protein sequences using BLAST against the NCBI database. & 
+        Fundamental for sequence alignment and homology searches. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+\subsection{Biomni-R0-32B Model}
+
+Biomni-R0-32B is based on the Qwen3-32B architecture and has been fine-tuned for biomedical reasoning tasks. The model was trained using the Biomni-SFT dataset, a proprietary collection of biomedical instruction-response pairs that is not publicly available. Key characteristics include:
+
+\begin{itemize}
+    \item \textbf{Base Architecture}: Qwen3-32B (32 billion parameters)
+    \item \textbf{Training Data}: Biomni-SFT dataset (proprietary)
+    \item \textbf{Optimization}: Fine-tuned for agentic reasoning patterns
+    \item \textbf{Precision}: Original model distributed in BF16 format
+\end{itemize}
+
+It is important to note that while the original Biomni-R0-32B paper reports an overall accuracy of 66.9\% on the Eval1 benchmark \cite{biomnir0}, our implementation targets the publicly available version provided via the official GitHub and HuggingFace repositories. Because the Biomni-SFT training data is proprietary and the full agent orchestration recipe used in the original study remains partially closed-source, local reproduction results may vary. Furthermore, our configuration reflects a resource-efficient version of the agent, utilizing only open-source tools and free APIs.
+This is the main challenge for this thesis. One does not need the training data to extract semantic knowledge from the fine-tuned model. 
+The Biomni project also developed an agent system called Biomni-A1, which uses LangGraph \cite{langgraph2024} for orchestrating multi-step biomedical reasoning workflows.
+LangGraph is an abstraction layered on top of LangChain that allows us to author stateful, cyclic agent workflows using a graph-based abstraction. It is one of the most reliable libraries to build production-ready AI agents. Since our experiments utilize the base R0 model with the agentic recipe, architecture workflow provided by the authors of Biomni Agent A1, it is important to understand the context within which the model operates. This context is examined more thoroughly in the following subsection.
+ 
+\subsection{Eval1 Benchmark}
+
+The Eval1 benchmark is a thorough biomedical assessment that was curated by a group of biomedical scientists \cite{biomni_eval1}. It was created as a benchmark for the Biomni R0 Model. There are 433 questions total, divided into ten different task categories:
+
+\begin{enumerate}
+    \item \textbf{CRISPR Delivery}: Focuses on the mechanisms and optimization strategies for CRISPR-Cas9 delivery. (10 questions)
+    \item \textbf{GWAS Causal Gene - GWAS Catalog}: Utilizes the GWAS Catalog database to pinpoint causal genes within genome-wide association studies. (50 questions)
+    \item \textbf{GWAS Causal Gene - OpenTargets}: Employs the OpenTargets platform for the systematic identification of causal genes. (50 questions)
+    \item \textbf{GWAS Causal Gene - PharmaProjects}: Leverages pharmaceutical databases to extract drug targets from GWAS-derived data. (50 questions)
+    \item \textbf{GWAS Variant Prioritization}: prioritize/rank GWAS-associated variants by predicted functional relevance (e.g., regulatory effects, coding impact, gene proximity). (43 questions)
+    \item \textbf{Lab Bench DBQA}: answer natural-language questions over laboratory experiment databases (samples, protocols, results, metadata). (50 questions)
+    \item \textbf{Lab Bench SeqQA}:  answer questions that require sequence-based analyses (e.g., similarity searches, motif finding, variant annotation). (50 questions)
+    \item \textbf{Patient Gene Detection}: infer candidate disease genes from patient clinical information (phenotypes, family history, and available molecular data). (50 questions)
+    \item \textbf{Rare Disease Diagnosis}: support differential diagnosis for rare genetic disorders by combining phenotypic profiles with candidate genes/variants. (30 questions)
+    \item \textbf{Screen Gene Retrieval}: retrieve and rank genes implicated by functional screening datasets (e.g., CRISPR or RNAi screens). (50 questions)
+\end{enumerate}
+The benchmark is designed to assess more than straightforward fact retrieval; it specifically targets multi-step reasoning in biomedical settings. These questions are framed as agentic tasks, requiring the model to navigate simulated tools and databases to reach a correct answer.
+
+\subsection{Agentic Workflow Architecture Biomni-A1}
+
+To tackle complex biomedical questions that call for outside tools, the model works inside a circular state graph setup. As shown in Figure \ref{fig:workflow_graph}, this process drives a repeating "Reason-Act" cycle. The flow kicks off at the \texttt{\_\_start\_\_} node and shifts to the \texttt{generate} phase, where the LLM writes a reasoning path and chooses the next move. If the model creates an \texttt{<execute>} tag, the state jumps to the \texttt{execute} node, which runs the code or tool and feeds results back to the context. This cycle repeats until the model produces a \texttt{<solution>} tag, moving finally to \texttt{\_\_end\_\_}.
+The dotted lines represent conditional edges in which if the condition is satisfied, the model moves to this node, otherwise it moves to the next node. In case of ending the loop between \texttt{generate} and \texttt{execute} nodes, the model searches for a \texttt{<solution>} tag to move to the \texttt{\_\_end\_\_} state in which it terminates the workflow to provide the final answer within the solution tag.
+
+\begin{figure}[htbp]
+    \centering
+    % Using the absolute path you provided
+    \includegraphics[width=0.9\textwidth, trim=0cm 7cm 0cm 7cm, clip]{/Users/hasanmarwanmahmoodaldhahi/Downloads/thesis_root/images/workflow_graph.pdf}
+    \caption{The Biomni-A1 agentic workflow implemented in LangGraph. The cycle between \texttt{generate} and \texttt{execute} allows for multi-step reasoning. The \texttt{self\_critic} branch is disabled in our experiments to ensure computational efficiency.}
+    \label{fig:workflow_graph}
+\end{figure}
+
+\subsection{Configuration of Self-Critic}
+While the design contains a \texttt{self\_critic} node built to check and reject the model's own answers, we set this feature to \textbf{False} for all trials in this thesis. The self-correction cycle forces the model to read its whole thought path again and give feedback, which could spark many extra rounds of generation and execution. This repeating process makes the run time and token use spike significantly. Since the main goal of this work is \textbf{resource-efficient deployment} on limited, shared machines, running such heavy loops is not an option. For this reason, the agent leans on the model's built-in logic to focus on speed and energy efficiency.
+
+\section{The Orthogonality Hypothesis}
+The thesis' main theoretic point is the \textit{Orthogonality Hypothesis}, which asserts: Quantization noise is high rank and isotropic, and semantic knowledge acquired by the extracted LoRA is low rank and structured. The two elements are mutually orthogonal in the weight space, which enables them to work together without major interference.
+
+\subsection{Theoretical Justification}
+
+Consider a weight matrix $W$ that undergoes both quantization and semantic adaptation:
+
+\begin{equation}
+W_{final} = W_0 + \Delta W_{semantic} + N_{quant}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $W_0$ is the original pre-trained weight
+    \item $\Delta W_{semantic} = BA$ is the low-rank semantic adaptation (rank $r$)
+    \item $N_{quant}$ is the quantization noise
+\end{itemize}
+
+The quantization noise $N_{quant}$ arises from rounding errors during quantization:
+
+\begin{equation}
+N_{quant} = W_{quantized} - W_{original}
+\end{equation}
+
+This noise has several important properties:
+
+\begin{enumerate}
+    \item \textbf{High-rank}: Quantization errors affect all elements of the weight matrix, resulting in a noise matrix with rank close to $\min(d, k)$.
+    
+    \item \textbf{Isotropic}: The rounding errors are approximately uniformly distributed and uncorrelated with the semantic structure of the weights.
+    
+    \item \textbf{Small magnitude}: For well-calibrated quantization, $||N_{quant}||_F \ll ||W_0||_F$.
+\end{enumerate}
+
+The low-rank semantic adaptation $\Delta W_{semantic}$ has complementary properties:
+
+\begin{enumerate}
+    \item \textbf{Low-rank}: By construction, $\text{rank}(\Delta W_{semantic}) = r \ll \min(d, k)$.
+    
+    \item \textbf{Structured}: The adaptation captures specific semantic patterns (e.g., biomedical reasoning).
+    
+    \item \textbf{Moderate magnitude}: Typically $||\Delta W_{semantic}||_F \approx 0.01 \times ||W_0||_F$.
+\end{enumerate}
+
+\subsection{Orthogonality Argument}
+
+If $N_{quant}$ and $\Delta W_{semantic}$ are orthogonal, their inner product should be small:
+
+\begin{equation}
+\langle N_{quant}, \Delta W_{semantic} \rangle = \text{Tr}(N_{quant}^T \Delta W_{semantic}) \approx 0
+\end{equation}
+
+This orthogonality implies that the two components do not interfere with each other. Specifically:
+
+\begin{equation}
+||W_0 + \Delta W_{semantic} + N_{quant}||^2 \approx ||W_0||^2 + ||\Delta W_{semantic}||^2 + ||N_{quant}||^2
+\end{equation}
+
+In practical terms, this means that a LoRA adapter trained on a BF16 model should remain effective when applied to the FP8-quantized version of the same base model, because the quantization noise does not corrupt the low-rank semantic subspace.
+
+\subsection{Theoretical Formalization of Subspace Orthogonality}
+
+To explain the robustness of the Naive Transfer method, we formalize the interaction between the semantic adaptation and quantization noise using high-dimensional geometry and linear algebra.
+
+\subsubsection{Definitions in Weight Space}
+
+Let the weight space be $\mathbb{R}^{d_{out} \times d_{in}}$. We define three matrices:
+
+\begin{itemize}
+    \item \textbf{Base Weights} ($W_{base}$): The original pre-trained parameters.
+    \item \textbf{Semantic Signal} ($L$): The LoRA update, where $L = BA$ and $\text{rank}(L) = r \ll \min(d_{out}, d_{in})$.
+    \item \textbf{Quantization Noise} ($N$): The perturbation introduced by FP8 quantization, defined as $N = W_{FP8} - W_{BF16}$.
+\end{itemize}
+
+The final effective weight matrix during inference is:
+
+\begin{equation}
+W_{final} = W_{base} + L + N
+\end{equation}
+
+\subsubsection{The Orthogonality Condition}
+
+Our empirical findings indicate that the Frobenius inner product between the signal $L$ and noise $N$ is negligible:
+
+\begin{equation}
+\langle L, N \rangle_F = \text{Tr}(L^T N) \approx 0
+\end{equation}
+
+This geometric orthogonality implies that the quantization noise does not project significantly onto the semantic subspace spanned by the LoRA adapters.
+
+\subsubsection{Impact on Forward Pass}
+
+Consider an input activation vector $x \in \mathbb{R}^{d_{in}}$. The output activation $y$ is:
+
+\begin{equation}
+y = (W_{base} + L + N)x = \underbrace{W_{base}x}_{\text{Base Output}} + \underbrace{Lx}_{\text{Semantic Update}} + \underbrace{Nx}_{\text{Quantization Error}}
+\end{equation}
+
+For the model to perform correctly, the Semantic Update must not be overwhelmed by the Quantization Error.
+
+We can decompose the noise matrix $N$ into two components relative to the semantic subspace of $L$:
+
+\begin{equation}
+N = N_{\parallel} + N_{\perp}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $N_{\parallel}$: The component of noise parallel to $L$ (destructive interference)
+    \item $N_{\perp}$: The component of noise orthogonal to $L$ (benign noise)
+\end{itemize}
+
+Since our cosine similarity is $\approx 0$, it implies that $||N_{\parallel}||_F \approx 0$. Therefore, almost all quantization energy lies in $N_{\perp}$.
+
+\subsubsection{Preservation of Semantic Direction}
+
+In high-dimensional spaces ($d \approx 5120$), random noise vectors are isotropic. According to the properties of high-dimensional geometry, a random vector (Noise) is nearly orthogonal to any fixed low-rank subspace (LoRA) with high probability.
+
+We can analyze the Signal-to-Noise Ratio (SNR) within the specific semantic direction. Let $u$ be a singular vector of $L$ (a direction of semantic meaning). The effective SNR in this direction is:
+
+\begin{equation}
+\text{SNR}_{semantic} = \frac{||Lu||}{||P_L(N)u||}
+\end{equation}
+
+where $P_L$ is the projection operator onto the subspace of $L$.
+
+Because $N$ is high-rank (spread across all dimensions) and $L$ is low-rank ($r = 256$), the energy of $N$ is diluted across $d$ dimensions, while the energy of $L$ is concentrated in $r$ dimensions.
+
+Even if the total magnitude of noise is large ($||N||_F > ||L||_F$), the projection of that noise onto the specific semantic direction is minimal:
+
+\begin{equation}
+||P_L(N)|| \approx \sqrt{\frac{r}{d}} ||N||
+\end{equation}
+
+For Qwen-32B ($d = 5120$, $r = 256$):
+
+\begin{equation}
+\sqrt{\frac{256}{5120}} \approx 0.22
+\end{equation}
+
+This mathematical bound explains why Method A succeeds: The noise vector $N$ may be large, but it is ``pointing'' in directions that represent unused capacity in the weight space, rather than the specific directions required for biomedical reasoning.
+
+\subsection{Implications for Transfer Methods}
+
+The Orthogonality Hypothesis has direct implications for the three transfer methods investigated in this thesis:
+
+\begin{itemize}
+    \item \textbf{Naive Transfer (Method A)}: Should succeed because $\Delta W_{semantic}$ is orthogonal to $N_{quant}$.
+    
+    \item \textbf{Corrective Extraction (Method B)}: May fail because attempting to encode both $\Delta W_{semantic}$ and $-N_{quant}$ in a rank-$r$ adapter exceeds the adapter's capacity, since $N_{quant}$ is high-rank.
+    
+    \item \textbf{Direct Quantization (Method C)}: Should largely succeed because quantization is applied after adaptation, preserving most of the semantic structure with some degradation from quantization.
+\end{itemize}
+
+The empirical validation of this hypothesis is a central contribution of this thesis, as presented in Chapters 5 and 6.
+
+\section{Related Work}
+
+This research is situated at the intersection of efficient Large Language Model (LLM) deployment, Post-Training Quantization (PTQ), and Parameter-Efficient Fine-Tuning (PEFT). While these components are well-studied individually, the interoperability between high-precision adapters and pre-quantized base models remains under-explored.
+
+\subsection{Efficient Deployment and FP8 Quantization}
+
+To cut the heavy running costs of LLMs, Post-Training Quantization (PTQ) and Quantization-Aware Training (QAT) has taken over as the go-to compression methods. Older tools like LLM.int8() \cite{dettmers2022llmint8} and SmoothQuant \cite{xiao2023smoothquant} aimed at managing activation spikes in integer files. Yet the field has moved to the FP8 floating-point type (E4M3/E5M2) \cite{micikevicius2022fp8}, which runs natively on NVIDIA Hopper and Ada Lovelace chips.
+Block-wise quantization is widely used to reduce accuracy losses in very large models by applying scale factors to small weight blocks (e.g., 128 elements). While this typically keeps quantization error low, the resulting dense pattern of per-block scales complicates the weight-space arithmetic required to merge or combine adapters.
+
+\subsection{PEFT and the Training-Inference Gap}
+
+LoRA \cite{hu2021lora} builds on the idea of intrinsic dimensionality \cite{aghajanyan2020intrinsic}, which argues that adapting a model to a new task can often be achieved within a low-rank subspace. More recent methods that combine quantization with adaptation—such as QLoRA \cite{dettmers2023qlora} and LoftQ \cite{li2024loftq}—primarily focus on making training more efficient. QLoRA trains LoRA adapters directly on top of a quantized base model, while LoftQ initializes the adapters so they compensate for quantization error before training begins.
+
+\textit{How this work differs:} In contrast to QLoRA and LoftQ, which require retraining and typically access to training data, \textit{our work addresses a transfer setting}: we study how to use already-trained, high-precision adapters with a quantized base model without any additional training. Our \textit{``Corrective Extraction'' approach (Method B)} indicates that a post hoc attempt to mimic LoftQ-style error compensation with a fixed-rank adapter runs into a capacity bottleneck. In effect, the quantization error behaves like a \textit{high-rank disturbance} that overwhelms the adapter's \textit{low-rank structure}, so the adapter cannot absorb the noise without exceeding its effective capacity.
+
+\subsection{Orthogonality and Biomedical Adaptation}
+Prior work on activation quantization has largely focused on preserving outlier dimensions. In contrast, we introduce an \textit{Orthogonality Hypothesis} grounded in high-dimensional geometry. Specifically, we posit that isotropic quantization noise is, in a statistical sense, orthogonal to the structured, low-rank parameter shifts associated with semantic adaptation.
+To test the hypothesis in a demanding setting, we evaluate on biomedical tasks using the Biomni benchmark \cite{biomni_eval1}. Tasks such as CRISPR design/optimization and GWAS interpretation often involve multi-step reasoning and have high consequences, so they provide a strict test of robustness. Biomedical workloads can also be sensitive to quantization error, meaning that small losses in numerical precision can lead to measurable drops in performance.

@@ -1,0 +1,124 @@
+
+\chapter{Conclusion}
+
+This thesis examined the feasibility of cross-precision transfer for domain-adapted large language models, focusing on whether high-precision (BF16) LoRA adapters can be applied to pre-quantized FP8 base models without retraining. 
+Through systematic experiments and supporting analysis, we demonstrate that cross-precision transfer is both practical and effective: it achieves statistical parity with the full-precision baseline while reducing the memory footprint by approximately $50\%$.
+\section{Summary of Contributions}
+
+This work makes three main contributions toward more efficient LLM deployment.
+
+\subsection{Empirical Support for the Orthogonality Hypothesis}
+This work tests the Orthogonality Hypothesis. The claim is that quantization adds a diffuse, high rank disturbance across many weights, while LoRA stores domain specific changes in a low rank subspace. The measurements agree with this claim. Averaged over layers, the cosine similarity between the LoRA update direction and the quantization error vector is about $-10^{-5}$, which is effectively zero.
+The Eval1 results follow the same trend. With naive transfer (Method~A), the FP8 model achieves $44.6\%$ accuracy, compared with $44.5\%$ for the full precision baseline. This is statistical parity. The 0.1 percentage point difference is within measurement noise, and no drop is visible across the ten biomedical task categories. These results show that a low rank adapter can retain task performance under cross precision transfer.
+In particular, an extracted rank-256 adapter preserves full accuracy, reinforcing the conclusion that the biomedical adaptation signal in this setting is well-approximated within a low-dimensional subspace.
+\subsection{Comparative Analysis of Transfer Methods}
+
+We compared three approaches to cross-precision transfer:
+\begin{enumerate}
+    \item \textbf{Method A (Naive Transfer)}: extract LoRA in BF16 and apply it to an FP8 base model.
+    \begin{itemize}
+        \item Result: 44.6\% accuracy (statistical parity with 44.5\% baseline)
+        \item Outcome: \textbf{Success}
+    \end{itemize}
+
+    \item \textbf{Method B (Corrective Extraction)}: extract LoRA from the difference between BF16 weights and dequantized FP8 weights.
+    \begin{itemize}
+        \item Result: 29.5\% accuracy (66.3\% retention)
+        \item Outcome: \textbf{Failure}
+    \end{itemize}
+
+    \item \textbf{Method C (Direct FP8 Quantization)}: quantize the domain-adapted model using Block-128 FP8 with domain-specific calibration.
+    \begin{itemize}
+        \item Result: 41.4\% accuracy (93\% retention)
+        \item Outcome: \textbf{Partial success}
+    \end{itemize}
+\end{enumerate}
+
+Method B performs worse than direct quantization, which is consistent with a capacity bottleneck: a fixed-rank adapter cannot simultaneously encode a low-rank semantic update and a high-rank quantization correction. In practice, the quantization component dominates the approximation budget, leaving insufficient capacity for domain knowledge.
+
+\subsection{Resource-Efficient Deployment Architecture}
+
+We also demonstrated a practical deployment strategy on the GWDG Chat AI infrastructure \cite{gwdg2024chatai} using vLLM's \cite{kwon2023efficient} multi-adapter support. This enables:
+\begin{itemize}
+    \item biomedical specialization (Biomni) on top of an existing FP8 base model,
+    \item approximately 32\,GB VRAM savings compared to hosting a separate FP8 quantized domain model,
+    \item dynamic endpoint switching between general and biomedical functionality, and
+    \item deployment without additional GPU hardware.
+\end{itemize}
+
+\section{Practical Impact}
+
+\subsection{Enabling Efficient Deployment}
+
+By showing that cross-precision transfer can retain baseline accuracy while reducing memory by roughly half, this work lowers the hardware barrier for serving domain-adapted 32B-parameter models:
+\begin{itemize}
+    \item \textbf{Before}: Biomni-32B in BF16 requires $\sim$64\,GB VRAM (typically A100/H100-class hardware).
+    \item \textbf{After}: Method A requires $\sim$40\,GB VRAM (feasible on a single high-memory GPU).
+\end{itemize}
+
+\subsection{Recommended Workflow}
+
+Based on the results in this thesis, a practical workflow for cross-precision transfer is:
+\begin{enumerate}
+    \item \textbf{Domain adaptation}: train adapters or fine-tune in BF16/FP32 for numerical stability.
+    \item \textbf{Adapter extraction}: compute $L = W_{adapted}^{BF16} - W_{base}^{BF16}$ (e.g., via MergeKit \cite{mergekit2023}/SVD).
+    \item \textbf{Cross-precision application}: apply $L$ to the pre-quantized base model $W_{base}^{FP8}$.
+    \item \textbf{Deployment}: serve via an inference engine with multi-adapter support (e.g., vLLM \cite{kwon2023efficient}).
+\end{enumerate}
+
+This avoids retraining in low precision, re-quantizing the domain-adapted model, or attempting post hoc quantization correction via fixed-rank adapters (which our results show to be unreliable in this setting).
+
+\subsection{Code Availability}
+
+To support reproducibility and enable further research, the implementation code, experimental scripts, and evaluation framework for this work are publicly available at:
+
+\url{https://gitlab.gwdg.de/haldhah/cross-precision-llm-deployment-biomni}
+
+The repository includes:
+\begin{itemize}
+    \item LoRA extraction and sanitization pipelines for Methods A and B
+    \item FP8 quantization implementation for Method C using \texttt{llm-compressor}
+    \item Evaluation framework for the Eval1 benchmark with the robust annotation protocol
+    \item vLLM deployment configurations and multi-adapter setup scripts
+    \item Documentation for reproducing the experimental results
+\end{itemize}
+
+\subsection{Infrastructure Sharing}
+
+For shared LLM services (such as GWDG Chat AI), cross-precision transfer enables:
+\begin{itemize}
+    \item multiple domain capabilities on a single resident base model,
+    \item reduced operational costs through memory and hardware sharing,
+    \item lower environmental impact through consolidated compute, and
+    \item flexible endpoint-based access to specialized adapters.
+\end{itemize}
+
+\section{Future Work}
+
+Several research directions follow naturally from this thesis:
+
+\subsection{Generalization to Other Quantization Formats}
+Future work should test INT8, NF4/INT4, mixed-precision schemes, and alternative quantizers such as GPTQ \cite{frantar2022gptq}/AWQ \cite{lin2023awq} in broader settings. The Orthogonality Hypothesis suggests naive transfer should remain effective when quantization errors remain approximately isotropic, but this requires empirical validation.
+
+\subsection{Extension to Other Domains}
+We evaluated biomedical reasoning only. It remains to be tested whether similar retention holds in domains such as code generation, legal reasoning, and mathematical problem-solving, which may have different precision sensitivities.
+
+\subsection{Theoretical Analysis of Orthogonality Conditions}
+A more formal treatment could derive conditions under which near-orthogonality is expected, establish bounds relating error projections to downstream accuracy, and characterize when orthogonality may fail.
+
+\subsection{Higher-Rank Adapters for Corrective Extraction}
+Method B fails at rank 256; exploring higher ranks (e.g., 1024--2048) could clarify the minimum capacity required to jointly represent semantic adaptation and quantization correction, and whether such ranks remain practically worthwhile.
+
+\subsection{Extension to Other Model Families}
+Validating the findings on other model families (e.g., LLaMA \cite{touvron2023llama}, Mistral/Mixtral, Gemma) would strengthen generalizability.
+
+\subsection{Multi-Adapter Scenarios}
+Finally, extending this study to multiple simultaneously loaded adapters would be valuable, including adapter composition, query-based adapter routing, and multi-domain serving on a single quantized base model.
+
+\section{Closing Remarks}
+When large language models are deployed under tight GPU memory constraints, the central challenge is to decide what to give up: accuracy, model size, or engineering simplicity.
+This thesis starts from a practical problem that repeatedly appears in real-world LLM deployment: the moment a model is pushed toward stronger domain specialization, it often becomes harder to serve efficiently, because specialization is commonly pursued through high-precision fine-tuning that increases memory requirements. The guiding idea in this work is that this apparent trade-off is not fundamental. Instead, precision and specialization can be treated as separate concerns by assigning them to different parts of the system: a shared, general-purpose backbone and a small, domain-specific update.
+Following this separation of roles, we do not fully fine-tune the backbone in high precision. Instead, we keep the base model quantized (e.g., FP8) and inject biomedical expertise through a lightweight adapter, trained and stored at higher precision and implemented as a simple LoRA overlay.
+In our experiments, transferring the model across numerical precisions preserves baseline performance while reducing memory use by about half, and it does so without increasing operational complexity. We interpret this behavior geometrically in parameter space: quantization acts like a broad, low-amplitude disturbance applied across many weights, whereas LoRA concentrates domain-specific information into a narrow low-rank subspace. Our measurements suggest these effects interfere only weakly, consistent with an approximately orthogonal relationship between quantization noise and the LoRA update direction. 
+Errors from the FP8 backbone do not materially change the directions that carry the biomedical adaptation, which helps explain why the specialization remains intact at lower precision. Overall, the results support the Orthogonality Hypothesis and show that it can guide practical deployment choices. In deployment terms, a domain-tuned model does not need its own full high-memory copy: one quantized base model can be reused, with small high-precision adapters added when needed, with little to no loss in accuracy.
+As model sizes and deployment demands continue to grow, such efficiency‑focused strategies are likely to become increasingly important. Cross‑precision transfer offers a practical and empirically validated way to make specialized models more accessible without the overhead of full‑precision serving. In particular, the central deployment goal of this work—integrating Biomni’s biomedical reasoning capabilities into the Chat AI service without allocating additional GPU resources—has been successfully achieved, demonstrating that resource‑efficient deployment of specialized scientific language models is both feasible and effective.

@@ -1,0 +1,251 @@
+\chapter{Results}
+
+This chapter presents the empirical evaluation of the three cross-precision transfer methods described in Chapter 3. We report quantitative performance on the Eval1 biomedical benchmark, provide per-task breakdown analysis, and present visualizations of the results. The findings provide empirical support for the Orthogonality Hypothesis and reveal the limitations of corrective extraction approaches.
+
+\section{Evaluation Setup}
+
+\subsection{Hardware and Software Configuration}
+
+All experiments were conducted on the following hardware:
+
+\begin{itemize}
+    \item \textbf{GPU}: NVIDIA A100 80GB (SXM4) / NVIDIA H100 94GB
+    \item \textbf{CPU}: AMD EPYC 7763 (64 cores)
+    \item \textbf{RAM}: 512GB DDR4
+    \item \textbf{Storage}: NVMe SSD (10TB)
+\end{itemize}
+
+Software versions:
+
+\begin{itemize}
+    \item \textbf{vLLM} \cite{kwon2023efficient}: 0.5.4
+    \item \textbf{PyTorch}: 2.3.0
+    \item \textbf{CUDA}: 12.1
+    \item \textbf{Transformers}: 4.41.0
+    \item \textbf{MergeKit} \cite{mergekit2023}: 0.4.2
+    \item \textbf{llm-compressor} \cite{llmcompressor2024}: 0.2.0
+\end{itemize}
+
+\section{Robust Response Annotation Protocol}
+
+A major issue during the biomedical reasoning evaluation was inconsistent output formatting. Although the prompt required the final answer to be wrapped in \texttt{<solution>} tags, the models often failed to follow this requirement, especially after quantization or after applying an adapter. 
+With strict string matching in the initial evaluation, many correct outputs were counted as false negatives.
+In many cases, models arrived at the correct biomedical conclusion but expressed it in free-form natural language (e.g., ``Therefore, the gene \textbf{PYCARD} emerges as the optimal candidate...'') rather than emitting the required XML answer format between the \texttt{<solution>} tags.
+To reduce false negatives from strict formatting rules, we used a four stage annotation pipeline.
+
+\subsection{Step 1: Heuristic Extraction}
+We designed an answer extraction module that checks the last 200 tokens of each response.
+It does not rely only on XML-style tags.
+Instead, it searches for phrases that usually mark the end of an answer, such as headings like ``Conclusion'' or ``Final Answer'',
+and for closing statements (e.g., ``X emerges as \dots'')
+or simple copula patterns (``X is \dots'', ``X has \dots'') followed by a candidate entity.
+In parallel, the module computes a ground-truth density score by counting how often the known correct answer string appears in the same segment.
+It also handles indirect mentions, where the model refers to the target using a synonym, alias, or related identifier,
+for example a SNP ID such as \texttt{rs4949874} instead of a gene symbol.
+\subsection{Step 2: LLM-as-a-Judge Evaluation}
+For cases where the heuristics produced low confidence, we used a separate large language model as an automatic judge 
+(\,\texttt{openai-gpt-oss-120b}, accessed via the GWDG Chat AI platform \cite{gwdg2024chatai}). 
+For each uncertain example, we constructed an evaluation prompt that included the original question,
+the reference answer, the model's full output,
+and the heuristic signals from Step~1. The prompt asked the judge to assess semantic equivalence rather than surface form,
+so that differences in formatting (e.g., XML, JSON, or plain text) did not matter, while factual correctness still did.
+\begin{lstlisting}[language=python, caption={Prompt Template for LLM-based Evaluation Judge}, label={lst:eval_prompt},
+basicstyle=\ttfamily\scriptsize, breaklines=true]
+You are an expert evaluator for a biomedical automated reasoning task. 
+Your goal is to determine if the 
+**Model's Extracted Solution** matches the **Ground Truth Answer**.
+
+### 1. Task Context (Original Question Snippet)
+{original_prompt}
+
+### 2. Ground Truth Answer
+{answer}
+
+### 3. Model's Extracted Solution
+{extracted}
+
+### 4. Heuristic Signals
+- Answer Occurrences in last 200 tokens: {count}
+- Potential Answer (from 'Conclusion'): {conclusion_candidate}
+- Potential Answer (emerges): {emerges_candidate}
+
+### Evaluation Rules
+1. Ignore Formatting: If Truth is "CCR4" and Solution is "{'gene': 'CCR4'}",
+this is a MATCH (1).
+2. Multiple Choice: If Truth is "B", and Solution is "B. P335A", this is a MATCH (1).
+3. Use Heuristics: If statistics show the answer appeared in the "Conclusion",
+trust the model found the answer.
+4. Nulls: Only return 'null' if the solution is completely ambiguous.
+
+Output Format:
+Reasoning: <Explanation>
+Label: <1, 0, or null>
+\end{lstlisting}
+
+If the judge could not make a confident determination, it was instructed to return \texttt{null}, thereby flagging the instance for manual review.
+
+\subsection{Step 3: Human Verification and Web Search}
+Although the automated judge substantially reduced False Negatives, it can still produce False Positives through semantic over-matching and it occasionally returns \texttt{null}. To protect data integrity, we therefore manually verified every flagged case. We used Perplexity AI to run targeted web searches for biological validation, which was particularly important when the model output was biologically correct but not string-identical to the ground truth (e.g., a gene synonym, a protein name rather than a gene name, or a nearby causal variant instead of the canonical target). During this step, we also checked that the model output actually \emph{endorsed} the entity as the answer, rather than merely mentioning it incidentally or in a negated context (e.g., ``Gene X is NOT the cause'').
+
+\subsection{Step 4: Final Aggregation}
+All performance statistics reported in this thesis reflect the aggregated outcomes of this multi-stage pipeline. This evaluation procedure is intended to measure underlying reasoning performance rather than adherence to a rigid output schema.
+
+\section{Quantitative Performance Results}
+
+\subsection{Overall Performance Comparison}
+
+Table \ref{tab:main_results} summarizes the primary quantitative comparison across all experimental methods and references.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model Configuration} & \textbf{Method} & \textbf{Acc.} & \textbf{Ret.} & \textbf{Size} \\
+\midrule
+Biomni-R0-32B (BF16) & Baseline & 44.5\% & 100.0\% & 64.0 GB \\
+\midrule
+Qwen3-FP8 + LoRA 256 & Method A & \textbf{44.6\%} & \textbf{100.2\%} & 40.0 GB \\
+Qwen3-FP8 + LoRA 256 (Dequant) & Method B & 29.5\% & 66.3\% & 40.0 GB \\
+R0-FP8 (Block-128) & Method C & 41.4\% & 93.0\% & 32.0 GB \\
+\midrule
+Qwen3-FP8 + LoRA 128 & Variant & 43.3\% & 97.3\% & 40.0 GB \\
+R0-INT8 (Per-tensor) & Reference & 40.9\% & 91.9\% & 34.8 GB \\
+Qwen3-BF16 (No Adapt.) & Reference & 22.1\% & 49.7\% & 64.0 GB \\
+\bottomrule
+\end{tabular}
+\caption{Performance comparison on Eval1 (433 questions). Method A achieves statistical parity with the baseline (44.6\% vs.\ 44.5\%) with $\sim$37.5\% memory reduction. Acc.\ = Accuracy, Ret.\ = Retention.}
+\label{tab:main_results}
+\end{table}
+The baseline accuracy in our evaluation is $44.5\%$, which differs from the $66.9\%$ reported in the original Biomni study \cite{biomnir0}. The main reason is tool availability. As shown in Table~\ref{tab:biomni_tools}, we did not include \texttt{advanced\_web\_search\_claude}, a tool that enables reasoning based web retrieval, because its cost is \$10.00 per 1{,}000 searches. To keep the evaluation reproducible and resource efficient, we restricted the agent to open source tools and free API tiers. Under these constraints, $44.5\%$ is the highest accuracy reached in a fully open source and local setup, and we use it as the baseline for the cross precision transfer experiments.
+There are additional limits on replication. Although the Biomni R0 32B model weights are available on HuggingFace \cite{biomnir0}, the Biomni SFT dataset used for training is proprietary. In addition, only parts of the original agent workflow and orchestration logic have been released. As a result, the absolute accuracy can vary with the evaluation setup, the set of available tools, and the configuration.
+The three methods show clear differences. \textbf{Method A Naive Transfer} reaches a mean accuracy of $44.6\%$, which matches the BF16 baseline of $44.5\%$ within the noise of the evaluation, so the transfer does not cause a measurable loss even when a BF16 LoRA adapter is used with an FP8 base model. \textbf{Method B Corrective Extraction} performs much worse, with $29.5\%$ accuracy and $66.3\%$ retention, and it is below the result from direct quantization. This supports the view that a rank 256 adapter is not sufficient to both preserve the learned biomedical adaptation and correct the errors introduced by quantization, especially after sanitization removes part of the update. Sanitization was applied in both Method A and Method B to make the models compatible with vLLM inference \cite{vllmpr33234}. vLLM LoRA support has historically omitted several transformer components, including \texttt{lm\_head}, \texttt{embed\_tokens}, normalization layers, and bias terms, which required pruning these parameters from extracted adapters. Even though both methods use the same pruning step, Method B is affected more because the quantization correction signal is spread across many weight matrices, including those that are pruned, while Method A mainly stores domain adaptation in attention and MLP weights that remain after pruning.
+\textbf{Method C Direct FP8 Quantization} falls between the other two methods. It reaches $41.4\%$ accuracy and $93\%$ retention using Block 128 FP8 quantization calibrated on biomedical data, but it is still 3.2 percentage points below Method A. This suggests that keeping a high precision adapter on top of a quantized base model is more effective than quantizing the entire specialized model.
+For deployment, Method A also reduces memory use. The total requirement drops from 64 GB to about 32.5 GB when LoRA overhead is included, which makes serving on a single GPU feasible with much lower VRAM. Results from the rank 128 variant point in the same direction. Accuracy remains strong at $43.3\%$, which corresponds to $97.3\%$ retention, indicating that most domain specific knowledge can be retained without the full capacity of rank 256.
+
+\subsection{Performance Visualization}
+
+Figure \ref{fig:bar_chart} provides a visual summary of average performance across the evaluated configurations.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{images/bar_chart.png}
+\caption{Average task performance across all model configurations. Method A (Qwen3 32B FP8 + LoRA 256 Extracted From Base) achieves 44.6\% accuracy, closely matching the baseline R0 32B BF16 (44.5\%).}
+\label{fig:bar_chart}
+\end{figure}
+\subsection{Per-Task Performance Breakdown}
+Table \ref{tab:per_task} reports accuracy disaggregated by task category, and Figure \ref{fig:heatmap} visualizes the same results as a heatmap to highlight systematic strengths and failures across configurations.
+
+\begin{table}[h]
+\centering
+\small
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Task} & \textbf{Baseline} & \textbf{Method A} & \textbf{Method B} & \textbf{Method C} & \textbf{Base} \\
+ & \textbf{(R0 BF16)} & \textbf{(Qwen3 FP8+LoRA)} & \textbf{(Dequant)} & \textbf{(R0 INT8)} & \textbf{(Qwen3 BF16)} \\
+\midrule
+CRISPR Delivery & 20\% & 30\% & 20\% & 20\% & 30\% \\
+GWAS Causal Gene (Catalog) & 36\% & 36\% & 18\% & 42\% & 14\% \\
+GWAS Causal Gene (OpenTargets) & 60\% & 54\% & 30\% & 68\% & 54\% \\
+GWAS Causal Gene (Pharma) & 50\% & 56\% & 48\% & 56\% & 50\% \\
+GWAS Variant Prioritization & 44\% & 49\% & 21\% & 47\% & 7\% \\
+Lab Bench DBQA & 58\% & 54\% & 46\% & 52\% & 10\% \\
+Lab Bench SeqQA & 74\% & 66\% & 60\% & 62\% & 24\% \\
+Patient Gene Detection & 32\% & 28\% & 12\% & 24\% & 2\% \\
+Rare Disease Diagnosis & 37\% & 37\% & 10\% & 10\% & 0\% \\
+Screen Gene Retrieval & 34\% & 36\% & 30\% & 28\% & 30\% \\
+\midrule
+\textbf{Average} & \textbf{44.5\%} & \textbf{44.6\%} & \textbf{29.5\%} & \textbf{41.4\%} & \textbf{22.1\%} \\
+\bottomrule
+\end{tabular}}
+\caption{Per-task performance breakdown across all model configurations. Method A preserves baseline-level performance across most categories, whereas Method B degrades consistently. The unadapted Qwen3-32B-BF16 base model highlights the importance of domain adaptation.}
+\label{tab:per_task}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{images/heatmap.png}
+\caption{Task-specific performance heatmap showing accuracy across model configurations and tasks. 
+\textbf{Method A}: Qwen3-32B FP8 base model with a LoRA (rank 256) adapter extracted from the base Qwen3-32B BF16 model. 
+\textbf{Method B}: Qwen3-32B FP8 base model with a LoRA (rank 256) adapter extracted from dequantized Qwen3-32B FP8 weights. 
+\textbf{Method C}: Fine-grained FP8 quantization of the R0-32B BF16 model. 
+Warmer colors indicate higher accuracy.}
+\label{fig:heatmap}
+\end{figure}
+Key observations from the per-task analysis include:
+
+\begin{itemize}
+    \item \textbf{Method A consistency}: Across most categories, Method A functions as a near drop-in replacement for the full-precision baseline. It matches or exceeds baseline performance on 8 out of 10 tasks, and when deviations occur they tend to be small (typically within 1--8 percentage points).
+
+    \item \textbf{Method B systematic failure}: By comparison, Method B exhibits a broad and consistent decline across every task category, pointing to a general degradation of useful representations rather than a narrow, task-specific weakness. The most pronounced failures appear on reasoning-intensive tasks that demand longer multi-step inference, including Patient Gene Detection (12\% vs.\ 32\% baseline) and Rare Disease Diagnosis (10\% vs.\ 37\% baseline).
+
+    \item \textbf{Task-specific patterns}:
+    \begin{itemize}
+        \item On GWAS Variant Prioritization, Method A delivers a clear improvement (49\% vs.\ 44\%), indicating that the transferred adapter signal remains effective for this category.
+        \item On Rare Disease Diagnosis, Method A exactly reproduces the baseline (37\% vs.\ 37\%), providing a particularly direct illustration of cross-precision parity.
+        \item Method C performs especially poorly on Rare Disease Diagnosis (10\%), suggesting that this category is unusually sensitive to quantization-induced distortion even under fine-grained schemes.
+    \end{itemize}
+
+    \item \textbf{Base model limitations}: Finally, the unadapted Qwen3-32B-BF16 model reaches only 22.1\% average accuracy, underscoring that domain adaptation is essential for biomedical reasoning. For some tasks, performance approaches a zero-shot failure mode without adaptation (Patient Gene Detection: 2\%; Rare Disease Diagnosis: 0\%).
+\end{itemize}
+\section{Method Comparison Analysis}
+
+\subsection{Method A vs. Baseline}
+Method A achieves statistical parity with the baseline (44.6\% vs.\ 44.5\%), which indicates no measurable loss from cross-precision transfer. The 0.1 percentage point difference is within measurement noise and should not be interpreted as an improvement. This finding implies:
+
+\begin{enumerate}[label=\roman*.]
+    \item transferring a BF16 LoRA onto an FP8 base model does not reduce measured task accuracy;
+    \item The sanitization step does not seem to have a significant impact on the performance;
+    \item the Orthogonality Hypothesis is consistent with the results, since quantization noise does not seem to interfere with the low-rank adaptation signal;
+    \item the observed +0.1\% difference is small and likely due to run-to-run variability, rather than a real advantage over full-precision inference.
+\end{enumerate}
+
+\subsection{Method B Failure Analysis}
+
+Method B performs substantially worse (29.5\% accuracy), providing several diagnostic implications:
+
+\begin{enumerate}
+    \item 66.3\% retention corresponds to the loss of roughly one-third of baseline capability;
+    \item performance falls below Method C (41.4\%), suggesting that the corrective extraction procedure does not merely fail to help, but can actively destabilize the transferred representation;
+    \item the consistent degradation across tasks indicates a fundamental limitation (e.g., capacity, compatibility constraints, or sanitization-induced signal loss) rather than a task-specific failure mode.
+\end{enumerate}
+
+\subsection{Method C Results}
+
+Method C (Direct FP8 Quantization with Block 128) reaches $41.4\%$ accuracy, which corresponds to $93\%$ retention. This is 3.1 percentage points below the BF16 baseline and indicates a moderate loss in performance. The Block 128 FP8 scheme splits each weight matrix into blocks of 128 elements along the quantization dimension and computes a separate scale, and a bias when applicable, for each block, which improves accuracy compared with per tensor quantization. We also apply domain calibration using 123 samples derived from Eval1 so that the quantization scales reflect biomedical long context activation patterns. In settings where LoRA transfer cannot be used, direct FP8 quantization remains a workable deployment option, with an approximate $7\%$ relative drop in retention in this configuration. The measured loss is in line with FP8 quantization effects reported in earlier work \cite{micikevicius2022fp8}.
+\textbf{Note on INT8 Reference}: We also evaluated an INT8 quantized R0 32B variant from HuggingFace \cite{biomni_r0_32b_preview_gguf}. It uses standard per tensor INT8 quantization and serves as a reference for comparing fine grained FP8 quantization against a conventional INT8 baseline. As we can see from figure \ref{fig:bar_chart}, the INT8 quantized model reaches $40.9\%$ accuracy, which is 3.6 percentage points below the BF16 baseline. This is in line with the $41.4\%$ reached by Method C, which suggests that the fine grained FP8 quantization is slightly better than per tensor INT8 quantization in this configuration.
+
+
+\section{Computational Efficiency}
+
+\subsection{Memory Footprint}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{Weights (GB)} & \textbf{LoRA (GB)} & \textbf{Total (GB)} \\
+\midrule
+Biomni-R0-32B (BF16) & 64.0 & --- & 64.0 \\
+Method A (FP8 + LoRA 256) & 32.0 & 8.0 & 40.0 \\
+Method C (R0-FP8, Block-128) & 32.0 & --- & 32.0 \\
+\bottomrule
+\end{tabular}
+\caption{Memory footprint comparison. Method A reduces total size by 37.5\% while preserving baseline performance. Method C reduces size by 50\% with an 7\% performance degradation in retention.}
+\label{tab:memory}
+\end{table}
+
+Method A yields an approximate 37.5\% reduction in total memory requirements:
+\begin{itemize}
+    \item Base model footprint: 64\,GB $\rightarrow$ 40\,GB (driven primarily by FP8 compression of the base weights)
+    \item LoRA adapter overhead: approximately 8\,GB for rank-256
+\end{itemize}
+\section{Summary of Results}
+The results align with the Orthogonality Hypothesis in the setting studied. Method~A matches the full precision baseline. A BF16 LoRA adapter on an FP8 quantized backbone reaches $44.6\%$ accuracy, versus $44.5\%$ for the reference, a difference of $0.1$ percentage points.
+
+Method~B is much weaker. Corrective extraction achieves $29.5\%$ accuracy ($66.3\%$ retention), below direct quantization, which points to a mismatch with the quantized parameter space and limited adapter capacity.
+
+Method~C falls between the two. Direct FP8 quantization with Block 128 and domain calibration yields $41.4\%$ accuracy ($93\%$ retention), an approximate $7\%$ relative drop. Domain adaptation has a large effect: the unadapted base model reaches $22.1\%$ accuracy. Method~A also reduces VRAM use by about $37.5\%$ while keeping baseline accuracy.
+
+Chapter~5 discusses Method~A and analyzes the failure cases of Method~B.

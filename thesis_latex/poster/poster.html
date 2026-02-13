@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fixed LoRA Surgery Diagram</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --bf16-color: #0077cc;
+            --fp8-color: #7d3cff;
+            --lora-gold: #d4af37;
+            --math-bg: #ffffff;
+            --text-dark: #2c3e50;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .poster-canvas {
+            width: 1250px;
+            height: 900px;
+            position: relative;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header { 
+            text-align: center; 
+            padding: 40px 0 20px 0;
+        }
+        
+        h1 { font-weight: 300; font-size: 2.5rem; color: var(--text-dark); margin: 0; }
+        h1 b { color: var(--bf16-color); font-weight: 700; }
+
+        .content-area {
+            display: flex;
+            flex: 1;
+            padding: 0 40px 40px 40px;
+            position: relative;
+        }
+
+        .models-column {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            z-index: 2;
+        }
+
+        .brain-box { text-align: center; }
+        
+        .brain-img {
+            width: 200px;
+            mix-blend-mode: multiply;
+        }
+
+        .full-p { filter: saturate(1.2) hue-rotate(160deg); }
+        .quant-p { 
+            width: 140px; 
+            filter: saturate(0.5) hue-rotate(250deg); 
+            opacity: 0.8;
+            image-rendering: pixelated; 
+        }
+
+        .extraction-zone {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .lora-snippet {
+            width: 90px;
+            height: 90px;
+            background-image: url('brain.png');
+            background-size: 240px;
+            background-position: center;
+            border-radius: 50%;
+            border: 4px solid var(--lora-gold);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+            background-color: white;
+            margin-bottom: 15px;
+        }
+
+        .methods-column {
+            width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-left: 10px solid var(--accent);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .stage-label {
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: #95a5a6;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .formula-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px inset #eee;
+        }
+
+        /* --- REFINED SVG CONNECTORS --- */
+        .connector-svg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .line { 
+            stroke: #ced6e0; 
+            stroke-width: 1.5; /* Made thinner */
+            fill: none; 
+        }
+        .dashed { stroke-dasharray: 6; opacity: 0.6; }
+
+        .double-burden {
+            color: #e74c3c;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="poster-canvas">
+    <div class="header">
+        <h1>LoRA Surgery: <b>Knowledge Grafting</b> across Domains</h1>
+    </div>
+
+    <div class="content-area">
+        <!-- Background Lines -->
+        <svg class="connector-svg">
+            <defs>
+                <!-- Smaller, sharper arrowhead -->
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                    <path d="M0,0 L8,4 L0,8 Z" fill="#ced6e0" />
+                </marker>
+            </defs>
+            
+            <!-- From Source Brain to Snippet -->
+            <path d="M 240 250 Q 340 250 370 410" class="line dashed" />
+            
+            <!-- THREE ARROWS FROM CENTRAL VERTEX -->
+            <!-- Vertex shifted to X=485 (Right edge of the gold snippet) -->
+            <path d="M 580 320 L 720 200" class="line" marker-end="url(#arrow)" />
+            <path d="M 580 320 L 720 400" class="line" marker-end="url(#arrow)" />
+            <path d="M 580 320 L 710 600" class="line" marker-end="url(#arrow)" />
+        </svg>
+
+        <!-- LEFT: MODELS -->
+        <div class="models-column">
+            <div class="brain-box">
+                <span class="stage-label">Donor Model (BF16)</span>
+                <img src="brain.png" class="brain-img full-p">
+                <div style="color: var(--bf16-color); font-weight: bold;">Biomni Source</div>
+            </div>
+
+            <div class="brain-box">
+                <span class="stage-label">Target Host (FP8)</span>
+                <img src="brain.png" class="brain-img quant-p">
+                <div style="color: var(--fp8-color); font-weight: bold;">Qwen Base</div>
+            </div>
+        </div>
+
+        <!-- CENTER: EXTRACTION -->
+        <div class="extraction-zone">
+            <span class="stage-label">Semantic Extraction</span>
+            <div class="lora-snippet"></div>
+            <div style="color: var(--lora-gold); font-weight: bold; text-align: center;">
+                \( \Delta W_{semantic} \approx B \cdot A \)
+                <div style="font-size: 0.8rem; font-weight: normal; color: #7f8c8d;">High-Precision Adapter</div>
+            </div>
+        </div>
+
+        <!-- RIGHT: METHODS -->
+        <div class="methods-column">
+            
+            <!-- METHOD A -->
+            <div class="card" style="--accent: var(--lora-gold);">
+                <span class="stage-label" style="color: var(--lora-gold);">Method A: Naive Transfer</span>
+                <div style="font-size: 0.9rem; margin-bottom: 5px;">Direct grafting of high-precision adapter to quantized host.</div>
+                <div class="formula-box">
+                    \[ W_{inf} = W_{FP8} + (B \cdot A)_{BF16} \]
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; opacity: 0.7;">
+                    <img src="brain.png" style="width: 35px; mix-blend-mode: multiply; filter: hue-rotate(250deg);">
+                    <span style="font-weight: bold;">+</span>
+                    <div class="lora-snippet" style="width: 25px; height: 25px; background-size: 70px; margin: 0; border-width: 2px;"></div>
+                </div>
+            </div>
+
+            <!-- METHOD B -->
+            <div class="card" style="--accent: var(--fp8-color);">
+                <span class="stage-label" style="color: var(--fp8-color);">Method B: Corrective Extraction</span>
+                <div style="font-size: 0.9rem;">Optimizing the adapter to learn semantic deltas while "fixing" quantization error.</div>
+                <div class="formula-box">
+                    \[ L_{corr} = W_{BF16}^{ft} - \text{Dequant}(W_{FP8}^{base}) \]
+                    \[ L_{corr} = \Delta W_{semantic} - N_{quant} \]
+                </div>
+                <div class="double-burden">⚠ Double Burden: Semantic Knowledge + Error Correction</div>
+            </div>
+
+            <!-- METHOD C -->
+            <div class="card" style="--accent: #95a5a6;">
+                <span class="stage-label">Method C: Direct Quantization</span>
+                <div style="font-size: 0.9rem;">Standard Post-Training Quantization (PTQ) baseline.</div>
+                <div class="formula-box">
+                    \[ W_{C} = \text{Quant}_{FP8}(W_{BF16}^{ft}) \]
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #eee; font-size: 0.85rem; color: #7f8c8d;">
+        Surgery Procedure: Extracting specialized semantic deltas from <b>Biomedical Domain</b> and grafting into <b>General Purpose</b> low-precision models.
+    </div>
+</div>
+
+</body>
+</html>

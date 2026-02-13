@@ -1,0 +1,175 @@
+\documentclass[12pt, a4paper, oneside]{book}
+
+% --- PACKAGES ---
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}       % For images
+\usepackage{geometry}       % Margins
+\usepackage{fancyhdr}       % Headers/Footers
+\usepackage{titlesec}       % Chapter title formatting
+\usepackage{hyperref}       % Clickable links
+\usepackage{listings}       % For code blocks
+\usepackage{xcolor}         % Colors for code
+\usepackage{amsmath}        % Math formulas
+\usepackage{amssymb}        % Math symbols
+\usepackage{wasysym}        % Additional symbols for checkboxes
+\usepackage{booktabs}       % Professional tables
+\usepackage[backend=biber,style=ieee,citestyle=numeric]{biblatex} % References
+\usepackage{enumitem}       % For custom itemize options
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{microtype}      % Better typography, reduces hyphenation
+\usepackage[none]{hyphenat} % Disable hyphenation entirely (optional - comment out if some hyphenation is desired)
+
+% --- CONFIGURATION ---
+
+% Hyphenation control - significantly reduce word breaking
+\tolerance=9999              % Very high tolerance for line breaks
+\emergencystretch=10em       % Allow more stretch before hyphenating
+\hbadness=10000              % Suppress badness warnings
+\hyphenpenalty=10000         % Penalty for hyphenating (very high = avoid)
+\exhyphenpenalty=10000       % Penalty for breaking at explicit hyphens
+\widowpenalty=10000          % Prevent widow lines
+\clubpenalty=10000           % Prevent orphan lines
+\brokenpenalty=10000         % Penalty for breaking pages at hyphens
+\sloppy                      % Allow looser line breaking to avoid hyphenation
+\geometry{top=3cm, bottom=3cm, left=3.5cm, right=2.5cm}
+\addbibresource{bibliography.bib}
+\input{thesis_details}
+
+% Hyperref configuration
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=blue,
+    urlcolor=blue,
+    pdftitle={\thesisTitle},
+    pdfauthor={\thesisAuthor}
+}
+
+% Code snippet styling
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegray},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% Header and footer styling
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- DOCUMENT START ---
+\begin{document}
+
+% Front Matter (Roman numerals)
+\frontmatter
+
+% Title Page
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+        
+        {\Large \thesisUniversity} \\
+        \vspace{0.5cm}
+        {\large \thesisFaculty} \\
+        
+        \vspace{2cm}
+        
+        \begin{minipage}{\textwidth}
+        \centering
+        \includegraphics[width=0.55\textwidth]{images/GOE_Logo_Quer_IPC_Farbe_RGB(1).png}
+        \hfill
+        \includegraphics[width=0.35\textwidth]{images/Gwdg-logo-neu.png}
+        \end{minipage}
+        
+        \vspace{2cm}
+        
+        {\Huge \textbf{Master's Thesis}} \\
+        
+        \vspace{1.5cm}
+        
+        {\LARGE \textbf{\thesisTitle}} \\
+        
+        \vspace{2cm}
+        
+        {\Large \textbf{\thesisAuthor}} \\
+        
+        \vfill
+        
+        {\large 
+        Supervised by: \\
+        \thesisSupervisorOne \\
+        \thesisSupervisorTwo
+        }
+        
+        \vspace{1cm}
+        
+        {\large \thesisDate}
+    \end{center}
+\end{titlepage}
+
+% Abstract
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\input{frontmatter/abstract}
+
+% ChatGPT Declaration
+% Only one heading: remove duplicate text in body by NOT including a second heading in the .tex insertion
+\chapter*{Declaration on the use of ChatGPT and comparable tools}
+% \addcontentsline{toc}{chapter}{Declaration on the use of ChatGPT and comparable tools}
+\input{frontmatter/chatgpt_declaration}
+
+
+% Acknowledgements
+\chapter*{Acknowledgements}
+\addcontentsline{toc}{chapter}{Acknowledgements}
+\input{frontmatter/acknowledgements}
+
+% Table of Contents
+\tableofcontents
+
+% List of Figures
+\listoffigures
+\addcontentsline{toc}{chapter}{List of Figures}
+
+% List of Tables
+\listoftables
+\addcontentsline{toc}{chapter}{List of Tables}
+
+% List of Listings
+\lstlistoflistings
+\addcontentsline{toc}{chapter}{List of Listings}
+
+% Main Content (Arabic numerals)
+\mainmatter
+
+\include{chapters/01_introduction}
+\include{chapters/02_background}
+\include{chapters/03_methodology}
+\include{chapters/05_results}
+\include{chapters/06_discussion}
+\include{chapters/07_conclusion}
+
+% Back Matter
+\backmatter
+
+\printbibliography[heading=bibintoc]
+
+\end{document}
+

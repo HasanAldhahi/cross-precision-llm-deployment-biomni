@@ -1,0 +1,11 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces The Biomni-A1 agentic workflow implemented in LangGraph. The cycle between \texttt {generate} and \texttt {execute} allows for multi-step reasoning. The \texttt {self\_critic} branch is disabled in our experiments to ensure computational efficiency.}}{10}{figure.2.1}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Average task performance across all model configurations. Method A (Qwen3 32B FP8 + LoRA 256 Extracted From Base) achieves 44.6\% accuracy, closely matching the baseline R0 32B BF16 (44.5\%).}}{28}{figure.4.1}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Task-specific performance heatmap showing accuracy across model configurations and tasks. \textbf {Method A}: Qwen3-32B FP8 base model with a LoRA (rank 256) adapter extracted from the base Qwen3-32B BF16 model. \textbf {Method B}: Qwen3-32B FP8 base model with a LoRA (rank 256) adapter extracted from dequantized Qwen3-32B FP8 weights. \textbf {Method C}: Fine-grained FP8 quantization of the R0-32B BF16 model. Warmer colors indicate higher accuracy.}}{30}{figure.4.2}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Layer-wise comparison of quantization noise magnitude ($\lVert N \rVert $) relative to LoRA signal magnitude ($\lVert K \rVert $). Although the noise is on average $611\times $ stronger than the signal (dashed blue line) and peaks at $4348\times $ in Layer 2, the model retains functionality, consistent with geometric (near-)orthogonality.}}{35}{figure.5.1}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Cosine similarity between quantization error vectors and the semantic adapter across all layers on average. INT4 noise (yellow) exhibits near-zero similarity to the LoRA adapter, comparable to a random baseline (grey). FP8 and INT4 errors (blue) also show low mutual correlation, suggesting that different quantization methods induce distinct error landscapes.}}{36}{figure.5.2}%
+\addvspace {10\p@ }

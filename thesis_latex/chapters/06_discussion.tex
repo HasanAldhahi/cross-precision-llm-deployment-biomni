@@ -1,0 +1,294 @@
+\chapter{Discussion}
+
+This chapter steps back from the results in Chapter~4 to examine why the three methods behave so differently in practice. In particular, we seek to explain why Method~A (Naive Transfer) performs unexpectedly well, whereas Method~B (Corrective Extraction) fails to deliver the anticipated gains. We interpret these outcomes through the lens of the Orthogonality Hypothesis, discuss what they imply about low-rank structure in domain adaptation, and distill practical lessons for deployment, along with the main limitations of this study.
+\section{Why Naive Transfer Succeeded}
+At a high level, the success of Method~A is straightforward to summarize: applying a BF16 LoRA adapter on top of an FP8-quantized base model preserves essentially all task performance. Method~A achieves statistical parity with the full-precision baseline (44.6\% vs.\ 44.5\%), with the 0.1 percentage point difference falling within measurement noise. 
+This is the expected outcome if the Orthogonality Hypothesis correctly characterizes the interaction between quantization and adaptation.
+\subsection{Empirical Evidence for Orthogonality}
+
+To see this more concretely, consider how the LoRA update is constructed in Method~A. We start from the full-precision models and define the biomedical adaptation as a simple difference:
+\begin{equation}
+L_{bio} = W_{biomni}^{\mathrm{BF16}} - W_{qwen}^{\mathrm{BF16}}.
+\end{equation}
+This vector captures how the weights need to move to turn the general-purpose model into its biomedical counterpart. We then apply this same update to the quantized backbone:
+\begin{equation}
+W_{final} = W_{qwen}^{\mathrm{FP8}} + L_{bio}.
+\end{equation}
+In other words, the base model remains in low precision, while the biomedical update is applied in higher precision.
+Empirically, the LoRA update $L_{bio}$ and the FP8 quantization noise $N_{quant}$ appear to occupy largely different directions in weight space. The term $L_{bio}$ represents the structured change associated with biomedical adaptation, whereas $N_{quant}$ acts as a broad, unstructured perturbation. If the two components are close to orthogonal, then their sum should produce little mutual interference.
+This is precisely what our measurements suggest. When we compute the cosine similarity between the adaptation vector $L_{bio}$ and the quantization noise vector $N_{quant}$ across all layers, we obtain on average:
+\begin{equation}
+\text{Cosine Similarity (Method A)} \approx -0.00001.
+\end{equation}
+A value this close to zero indicates that the direction in which the adapter moves the weights has almost no alignment with the direction of the quantization-induced distortion. In practical terms, the low-precision noise does not “push against’’ the semantic update in any systematic way, which helps explain why the adapter continues to function as intended even on a quantized backbone.
+
+Method~B, where we explicitly try to \emph{correct} quantization error, paints a different picture. There, the extracted update is constructed with the goal of undoing the FP8 distortion. When we analyze this update in the same way, the cosine similarity with $N_{quant}$ is much higher on average across all layers:
+\begin{equation}
+\text{Cosine Similarity (Method B)} \approx 0.40.
+\end{equation}
+In a space with dimension $d \approx 5120$, a cosine similarity of $0.4$ implies a clear directional alignment. This suggests that the correction term in Method~B is tied to the FP8 quantization noise pattern rather than reflecting a semantic update. The result is an update that is less robust and less transferable, which matches the lower accuracy observed for Method~B.
+
+In practical terms, the extracted update is not dominated by a low rank semantic component. It contains a substantial contribution from higher rank quantization artifacts. This geometric interpretation helps explain the reduction in downstream accuracy.
+\subsection{Interpretation of Orthogonality Results}
+
+The near-zero cosine similarity across all layers observed in Method A implies:
+
+\begin{enumerate}
+    \item \textbf{Geometric separation}: semantic adaptation and FP8 quantization noise occupy nearly orthogonal subspaces of the weight space.
+    \item \textbf{Limited interference}: although quantization can introduce nontrivial perturbations in magnitude, these perturbations have minimal projection onto the directions that encode biomedical adaptation.
+    \item \textbf{Robust transfer}: because the semantic update remains largely intact under quantization, cross-precision transfer via Naive Transfer can preserve performance despite reduced numerical precision.
+\end{enumerate}
+
+\textit{Caveat}: These results constitute empirical evidence rather than a formal proof. The observed orthogonality may be approximate, architecture-dependent, and task-dependent, and additional work is required to characterize when and why it holds.
+
+\subsection{Low-Rank Structure vs. High-Rank Noise}
+
+A natural explanation for the observed orthogonality follows from the rank structure of the two components:
+
+\begin{itemize}
+    \item \textbf{Semantic adaptation $L_{bio}$}: predominantly low-rank (rank 256), representing structured, reusable patterns associated with biomedical domain shift.
+    \item \textbf{Quantization noise $N_{quant}$}: effectively high-rank (close to full-rank), arising from distributed rounding and scaling effects that are comparatively unstructured.
+\end{itemize}
+
+In high-dimensional settings ($d \approx 5120$ for Qwen-32B), a generic high-rank perturbation is unlikely to have a large projection onto any fixed low-rank subspace. This aligns with standard concentration-of-measure intuition: as dimensionality grows, most randomly oriented directions become nearly orthogonal, and structured subspaces occupy a vanishing fraction of the ambient space.
+
+\section{The Limits of Orthogonality: An INT4 Case Study}
+
+To probe how far the Orthogonality Hypothesis extends under more extreme distortion, we moved beyond FP8 and evaluated aggressive INT4 quantization using AWQ \cite{lin2023awq}. 
+We applied the same Method C to quantize the R0-32B BF16 model into INT4. The calibration dataset used for FP8 quantization was reused for INT4, ensuring a controlled comparison. The only change was the quantization scheme itself: AWQ (Activation-Aware Weight Quantization) \cite{lin2023awq}, a post-training quantization (PTQ) method that selectively leaves a subset of low-impact (“silent”) weights unquantized in order to better preserve model performance.
+This setting helps separate two factors that are otherwise conflated: (i) whether the error aligns with semantic directions (geometry) and (ii) how large the error is (magnitude) when we apply harsher quantization.
+
+\subsection{The Magnitude Paradox}
+
+The INT4 results reveal a magnitude paradox: even though INT4 quantization introduces noise that is orders of magnitude larger than the semantic update. As shown in Figure~\ref{fig:magnitude_paradox}, the effective signal-to-noise ratio (SNR) is inverted. On average, the Frobenius norm of the quantization noise ($\lVert N \rVert$) is $611\times$ larger than the norm of the LoRA signal ($\lVert K \rVert$).
+
+In some layers, the disparity is even more extreme. For example, in Layer 2 the ratio peaks at $4348\times$. Under a conventional signal processing view, a signal that is thousands of times weaker than the noise would be unrecoverable---analogous to recovering a single drop of wine dissolved in a swimming pool of salt water.
+
+The resolution to this paradox lies in \emph{high-dimensional geometry}. In a weight space of dimension $d \approx 5120$, there is an enormous amount of ``room.'' The quantization noise, despite its large total magnitude, is spread thinly across all $5120+$ dimensions. In contrast, the LoRA signal is concentrated in a low-rank subspace of dimension $r = 256$. The noise magnitude is high globally, but its \emph{density} in the specific semantic directions is low. Mathematically, the expected projection of isotropic noise onto a rank-$r$ subspace scales as $\sqrt{r/d} \approx 0.22$, meaning only about 5\% of the noise energy lands in the semantic subspace. The model survives because the directions that matter for biomedical reasoning are largely orthogonal to the directions where quantization noise resides.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{images/fig_6_x_magnitude.png}
+\caption{Layer-wise comparison of quantization noise magnitude ($\lVert N \rVert$) relative to LoRA signal magnitude ($\lVert K \rVert$). Although the noise is on average $611\times$ stronger than the signal (dashed blue line) and peaks at $4348\times$ in Layer 2, the model retains functionality, consistent with geometric (near-)orthogonality.}
+\label{fig:magnitude_paradox}
+\end{figure}
+
+\subsection{Geometric Isolation}
+
+To test whether this robustness is explained by geometry rather than magnitude, we measured cosine similarity between the INT4 noise and the LoRA adapter direction across all layers on average.
+
+As shown in Figure~\ref{fig:geometric_separation}, the measured similarity is $\approx 0.004$, which is close to the random baseline ($\approx 0$). We also quantified \emph{subspace leakage}, defined as the fraction of quantization-noise energy that projects into the low-rank semantic subspace ($r=256$). The measured leakage is 25.8\%, only modestly above the random baseline of 22.3\% (approximately $r/d$). Together, these results are consistent with AWQ noise behaving approximately isotropically: the quantization error is dispersed across weight space rather than concentrated in the semantic adaptation subspace.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{images/fig_6_y_orthogonality.png}
+\caption{Cosine similarity between quantization error vectors and the semantic adapter across all layers on average. INT4 noise (yellow) exhibits near-zero similarity to the LoRA adapter, comparable to a random baseline (grey). FP8 and INT4 errors (blue) also show low mutual correlation, suggesting that different quantization methods induce distinct error landscapes.}
+\label{fig:geometric_separation}
+\end{figure}
+
+\subsection{Independence of Quantization Errors}
+At the end, we also examined whether quantization artifacts depend more on the weight-space geometry or on the quantization method. To quantify this, we computed the cosine similarity between the FP8 error vector ($N_{\mathrm{FP8}}$) and the INT4 error vector ($N_{\mathrm{INT4}}$), obtaining 0.027 on average across all layers as shown in the Figure \ref{fig:geometric_separation}.
+This near-zero alignment indicates that different quantization kernels produce geometrically distinct error directions, rather than a single shared error mode determined only by the base weights.
+
+This supports the broader interpretation that cross-precision transfer can be robust across quantization schemes: the semantic adaptation largely resides in a structured subspace that standard quantization noise does not consistently target.
+
+\section{Empirical Validation of Low-Rank Structure}
+
+The success of Method A also provides indirect evidence for the low-rank view of domain adaptation.
+
+\subsection{Extraction as an Implicit Test}
+
+Because the adapter is extracted (via SVD/MergeKit) from the difference between the fully fine-tuned model ($W_{\mathrm{SFT}}$) and the base model ($W_{\mathrm{base}}$), the transfer experiment serves as an \textit{ex post} test of the intrinsic dimensionality of biomedical adaptation.
+
+The finding that the extracted rank-256 adapter preserves essentially all of the full fine-tune performance (44.6\% vs.\ 44.5\%) suggests that biomedical domain adaptation is inherently low-rank. If biomedical capability required high-rank updates distributed broadly across the parameter space, a rank-256 approximation would be expected to discard substantial task-relevant information and yield a larger performance gap.
+
+\subsection{Implications for Intrinsic Dimensionality}
+
+Concretely, these results indicate that:
+
+\begin{enumerate}
+    \item \textbf{Low-dimensional semantic subspace}: The adaptation needed for tasks such as CRISPR delivery, GWAS interpretation, and rare disease diagnosis is largely concentrated in a subspace with dimension $r \leq 256$.
+    \item \textbf{Compression without task loss}: Rank-truncated SVD can compress the full fine-tuning update while retaining the task-relevant directions needed for biomedical reasoning.
+    \item \textbf{Intrinsic dimensionality estimate}: For this model and benchmark, the ``intrinsic dimensionality'' of biomedical adaptation appears to be on the order of a few hundred dimensions.
+\end{enumerate}
+
+This observation is consistent with prior work on intrinsic dimensionality \cite{aghajanyan2020intrinsic}, which argues that even complex task adaptations often lie in relatively low-dimensional subspaces.
+
+\section{Why Corrective Extraction Failed}
+
+In contrast to Method A, Method B retains only 66.3\% of baseline performance (29.5\% accuracy), performing worse than direct quantization. This failure highlights a practical capacity limit of fixed-rank adapters when they are asked to represent qualitatively different types of updates simultaneously.
+\subsection{vLLM Sanitization Constraints}
+
+One factor behind the weaker results of Method B is the required sanitization step imposed by vLLM LoRA support \cite{vllmpr33234}. As discussed in Chapter~3, vLLM has historically not supported LoRA adapters for several transformer components, including \texttt{lm\_head}, \texttt{embed\_tokens}, normalization layers, and bias terms. These parts operate over vocabulary sized tensors rather than hidden state sized tensors, which calls for special low rank parameterizations that were not implemented in early versions of vLLM.
+
+Method A and Method B use the same sanitization procedure, but the outcomes differ strongly. The reason is the following:
+\begin{itemize}
+    \item \textbf{Method A}: The sanitized adapter captures a ``clean'' semantic update ($\Delta W_{semantic}$) extracted from the difference between two BF16 models. 
+    Even after pruning the embedding and normalization parameters, the remaining attention and MLP weights still contain most of the biomedical adaptation signal. When this update is applied to the FP8 base model, it stays largely orthogonal to the quantization noise.    
+    \item \textbf{Method B}: The sanitized adapter is meant to represent both the semantic update and the quantization correction, that is $\Delta W_{semantic} - N_{quant}$.
+    Critically, the quantization error $N_{quant}$ is distributed across \emph{all} weight matrices, including the embedding and normalization layers that are subsequently pruned. By removing these components, the sanitization step discards a portion of the corrective signal, leaving an incomplete and potentially inconsistent update that neither fully corrects quantization nor preserves the semantic adaptation.
+\end{itemize}
+
+In effect, sanitization affects Method B more severely because the corrective information is more uniformly distributed across all model components, whereas the semantic adaptation in Method A is concentrated in the attention and MLP layers that survive sanitization.
+
+\subsection{The Dual-Objective Problem}
+
+Method B extracts an adapter from
+\begin{equation}
+L_{corrective} = W_{biomni}^{BF16} - \mathrm{Dequant}\!\left(W_{qwen}^{FP8}\right).
+\end{equation}
+Writing dequantization as the original weights plus quantization error,
+\begin{equation}
+\mathrm{Dequant}\!\left(W_{qwen}^{FP8}\right) = W_{qwen}^{BF16} + N_{quant},
+\end{equation}
+we obtain
+\begin{equation}
+L_{corrective} = W_{biomni}^{BF16} - \left(W_{qwen}^{BF16} + N_{quant}\right)
+               = \underbrace{\left(W_{biomni}^{BF16} - W_{qwen}^{BF16}\right)}_{\Delta W_{semantic}}
+                 \;-\; N_{quant}.
+\end{equation}
+
+Thus, $L_{corrective}$ implicitly bundles two objectives:
+\begin{enumerate}
+    \item \textbf{Semantic adaptation}: $\Delta W_{semantic}$, which is well-approximated as low-rank (empirically $\sim$256).
+    \item \textbf{Quantization correction}: $-N_{quant}$, which is effectively high-rank (spread across many directions).
+\end{enumerate}
+
+\subsection{Capacity Saturation}
+
+When we approximate $L_{corrective}$ with a rank-256 factorization,
+\begin{equation}
+L_{corrective} \approx U_{256}\Sigma_{256}V_{256}^{T},
+\end{equation}
+the truncated SVD allocates its limited rank budget to directions associated with the largest singular values. Because $N_{quant}$ is pervasive and contributes energy across many directions, it can dominate the singular value spectrum. 
+As a result, the extracted rank-256 adapter allocates a substantial fraction of its limited degrees of freedom to representing quantization artifacts rather than the intended semantic shift $\Delta W_{semantic}$.
+
+Operationally, the adapter becomes effectively ``over-subscribed'': it is not expressive enough to simultaneously (i) compensate for a high-rank perturbation and (ii) preserve a low-rank domain adaptation signal. The resulting update therefore fails on both fronts---it neither reliably corrects quantization effects nor consistently retains the biomedical specialization.
+
+\subsection{Evidence from Performance Analysis}
+
+The per-task results align with this interpretation:
+
+\begin{itemize}
+    \item \textbf{Broad degradation}: Method B underperforms across all task categories rather than failing on a narrow subset, which is indicative of a global loss of useful representations.
+    \item \textbf{Largest drops on reasoning-heavy tasks}: categories such as Patient Gene Detection and Rare Disease Diagnosis show the most severe declines, consistent with disruption of multi-step semantic reasoning.
+    \item \textbf{Net harm relative to naive transfer}: while Method B may still outperform the unadapted base model on some tasks, it performs substantially worse than Method A, suggesting that the attempted ``correction'' introduces interference rather than providing a clean improvement.
+\end{itemize}
+
+\section{Comparison with Direct Quantization}
+
+Method C (direct FP8 quantization with Block-128) retains 93\% of baseline performance (41.4\% accuracy), providing a reference point for the cost of quantization in the absence of cross-precision transfer.
+\subsection{Quantization Degradation}
+
+The drop from 44.5\% to 41.4\% represents the intrinsic performance cost of FP8 quantization in this setting, even with domain-specific calibration. Likely contributors include:
+
+\begin{enumerate}
+    \item \textbf{Precision loss}: FP8 E4M3 reduces mantissa precision relative to BF16, impacting numerically sensitive computations.
+    \item \textbf{Error accumulation}: Small quantization errors can compound over many layers during inference.
+    \item \textbf{Task sensitivity}: Some biomedical tasks may depend on subtle intermediate computations and therefore be more sensitive to reduced precision.
+    \item \textbf{Calibration limits}: A finite calibration set may not cover the full distribution of activation patterns seen at inference time.
+\end{enumerate}
+
+Block-wise quantization (Block-128) mitigates these effects by using local scaling within each weight matrix \cite{xiao2023smoothquant}, but it does not eliminate them.
+
+\subsection{Method A vs.\ Method C}
+
+Comparing Method A and Method C shows that cross-precision transfer can be preferable to fully quantizing the adapted model:
+\begin{itemize}
+    \item \textbf{Method A}: 44.6\% accuracy (statistical parity with baseline)
+    \item \textbf{Method C}: 41.4\% accuracy (93\% retention)
+\end{itemize}
+The 3.7-point gap suggests that keeping the domain adaptation in high precision (BF16) while quantizing only the base model is less destructive than quantizing the entire adapted model.
+
+\subsection{Knowledge Concentration Principle}
+
+A natural objection is that Method A benefits from leaving the adapter in BF16, whereas Method C quantizes the full model. However, this asymmetry is precisely the practical insight: for domain transfer, it can be more effective to preserve high precision for a small, task-critical parameter subset (the rank-256 adapter) than to reduce precision uniformly across all weights.
+
+Even with a strong calibration set (3.1M tokens), Method C does not match Method A. This supports a \textit{knowledge concentration} view: the ``delta'' weights encoding new domain knowledge can be disproportionately sensitive to precision, so isolating them in a high-precision overlay yields better accuracy while still achieving substantial memory savings.
+
+\section{Resource-Efficient Deployment Architecture}
+
+A practical contribution of this work is a deployment pattern that supports domain specialization without duplicating the full model footprint.
+
+\subsection{The Chat AI Service Context}
+
+The GWDG Chat AI service \cite{gwdg2024chatai} is a standalone LLM web service that hosts multiple models on a scalable backend. Key characteristics include:
+\begin{itemize}
+    \item deployment on cloud VMs with secure access to HPC systems,
+    \item a privacy-preserving alternative to commercial services,
+    \item no storage of user data and no training on user interactions, and
+    \item current hosting of Qwen3-32B-FP8 for general-purpose use.
+\end{itemize}
+
+The central operational question is: \textit{How can specialized biomedical capability be added without provisioning additional GPUs or disrupting the existing service?}
+
+\subsection{vLLM Multi-Adapter Solution}
+
+vLLM's \cite{kwon2023efficient} multi-adapter support allows LoRA adapters to be attached to a running base model. This enables:
+\begin{enumerate}
+    \item \textbf{Resource sharing}: a single FP8 base model resident in VRAM can serve both general-purpose and biomedical requests;
+    \item \textbf{Dynamic switching}: inference endpoints can select whether to apply the Biomni adapter on a per-request basis;
+    \item \textbf{Memory efficiency}: the adapter adds only $\sim$8\,GB of overhead, compared to $\sim$64\,GB required to host an additional BF16 model instance or $\sim$32\,GB for an FP8 version;
+    \item \textbf{Scalability}: multiple domain adapters can be loaded without linear growth in base-model memory, since the FP8 weights are shared.
+\end{enumerate}
+
+\subsection{Practical Benefits}
+The deployment framework also has practical benefits for sustainability and operations. It cuts GPU memory use by about 32 GB compared with serving a separate BF16 Biomni instance with FP8 quantization, and it does so without requiring new hardware: domain-specific behavior is provided through lightweight adapters on existing GPUs. It also simplifies maintenance. The quantized backbone stays unchanged, and only the domain adapter is swapped, so features can be enabled, disabled, or updated with little downtime. This reduces infrastructure needs as well. Instead of running separate servers for general and specialized models, multiple capabilities can share one backbone and differ only by the attached adapter. At the system level, it can also reduce energy use, since the shared setup avoids duplicating full inference stacks and lowers redundant compute and memory work.
+\section{Engineering Lessons}
+The process of implementing the three methods yielded several practical findings that transcend the scope of this particular investigation, offering valuable guidance for a wide range of research and production scenarios involving quantized parameters and operations across different numerical precisions.
+\subsection{Format Verification Pipeline}
+
+While Block-128 FP8 formats are documented in the Qwen3 model card, safely performing weight-space arithmetic necessitates explicit, layer-by-layer verification of the serialized weight representation. In practice, this requires several key checks:
+\begin{enumerate}
+    \item \textbf{Scale tensor interpretation}: confirming how per-block scales are stored and applied;
+    \item \textbf{Dequantization correctness}: validating that reconstructed weights have plausible distributions;
+    \item \textbf{Intermediate precision}: ensuring arithmetic does not introduce avoidable rounding or overflow.
+\end{enumerate}
+We therefore used a lightweight verification pipeline to test post-dequantization statistics before running expensive GPU evaluations.
+
+\subsection{Library Considerations}
+
+Current inference libraries (Transformers, vLLM) increasingly support FP8 natively, but they often hide quantization internals. For research that requires manipulating weights directly:
+\begin{itemize}
+    \item high-level APIs may not expose the necessary representations,
+    \item custom dequantization is often required for operations such as adapter extraction, and
+    \item statistical sanity checks become essential whenever quantized weights are reconstructed.
+\end{itemize}
+
+\section{Limitations}
+
+\subsection{Single Model Family}
+All experiments use the Qwen3-32B family \cite{yang2025qwen3}. Validation on other model families (e.g., LLaMA \cite{touvron2023llama}, Mistral, Gemma) is needed.
+
+\subsection{Single Domain}
+We focus on biomedical reasoning (Eval1 \cite{biomni_eval1}). Other domains may exhibit different intrinsic dimensionality and different sensitivity to quantization.
+
+\subsection{Single Quantization Format}
+Most analysis is for FP8 (Block-128) \cite{micikevicius2022fp8}, with an additional INT4 (AWQ \cite{lin2023awq}) case study. Other schemes (INT8, NF4) could behave differently.
+
+\subsection{Fixed Rank}
+The main experiments use rank-256 adapters. Although a rank-128 result is reported, a more systematic rank sweep would strengthen conclusions.
+
+\subsection{Benchmark Specificity}
+Eval1 targets particular biomedical reasoning tasks \cite{biomni_eval1}. Results may differ on other biomedical benchmarks (e.g., BioASQ, PubMedQA) or general benchmarks.
+
+\section{Threats to Validity}
+
+\subsection{Measurement Variability}
+The difference between Method A (44.6\%) and the BF16 baseline (44.5\%) is within measurement noise. We therefore interpret the result as parity, not an improvement.
+
+\subsection{Cosine Similarity Interpretation}
+Near-zero cosine similarity on average across all layers in the model provides evidence consistent with orthogonality, but it is not a proof. Alignment may vary across layers, tasks, and quantization settings.
+
+\subsection{Generalization}
+Success in this particular model/benchmark setting does not guarantee success elsewhere; cross-precision transfer should be validated per deployment scenario.
+
+\subsection{Systemic Transparency and Agentic Logic}
+
+A significant challenge in evaluating the Biomni-R0-32B model is the lack of transparency regarding its original training environment. The model was trained on the proprietary Biomni-SFT dataset, to which we do not have access. Furthermore, while we utilized the agentic workflow provided in the official GitHub repository, it is possible that the internal ``agent recipe'' used during the original research evaluation differs from the open-sourced version.
+
+Because the original training data and the full evaluation code for the R0 model are not public, our evaluation follows the information available through HuggingFace and the Biomni GitHub repository. As shown in Table~\ref{tab:biomni_tools}, we also excluded \texttt{advanced\_web\_search\_claude}, which costs \$10.00 per 1{,}000 searches, in order to keep the setup open source and within a limited budget. This change likely explains part of the gap between our baseline accuracy ($44.5\%$) and the $66.9\%$ reported in the original paper \cite{biomnir0}.
+
+Given these constraints, absolute accuracy depends on the orchestration logic, the training data distribution, and the set of available tools. The focus of this thesis is therefore performance retention under cross precision transfer rather than maximizing absolute score. Under this goal, the statistical parity of Method A ($44.6\%$) with the $44.5\%$ baseline is a meaningful result. Since the same baseline is used throughout, the relative comparisons across methods remain consistent.
+
+Even with the lower baseline, the separation between Method A (statistical parity) and Method B ($66.3\%$ retention), together with the geometric diagnostics, supports the conclusion that naive cross precision transfer can work when the semantic update remains geometrically separated from quantization noise.

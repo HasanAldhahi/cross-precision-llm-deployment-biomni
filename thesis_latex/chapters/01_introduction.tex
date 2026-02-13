@@ -1,0 +1,73 @@
+\chapter{Introduction}
+
+\section{Motivation}
+
+The scale of LLMs has grown significantly, leading to a persistent bottleneck and the need for more hardware infrastructure, with GPU Memory (VRAM) serving as the key limitation. Despite the impressive reasoning power of modern model architectures like Qwen3-32B \cite{yang2025qwen3}, deploying such models in native Brain Float (BF16) precision remains expensive or technically unfeasible for many service providers. For example, a 32-billion parameter model requires approximately 64 GB of VRAM in BF16; this threshold is unrealistic for consumer-grade hardware and imposes a high cost of entry for production environments. A more scale-efficient solution to this memory crisis is Post-Training Quantization (PTQ) to FP8 \cite{micikevicius2022fp8}, which reduces hardware requirements by half by scaling weight and activation precision from 16 bits down to 8 while maintaining almost the same performance as the full-precision baseline. This transition is facilitated by the native hardware support provided in contemporary NVIDIA architectures, such as the Hopper and Ada Lovelace series.
+
+The real difficulty, however, arises when we move beyond general-purpose models. Domain-specific models are usually either all the weights fully fine-tuned on domain specific datasets or small fraction of newly added layers (LoRA adapters) are fine-tuned \cite{hu2021lora}. The latter approach is almost always conducted in high-precision (BF16 or FP16) to ensure numerical stability between the original frozen weights and the learned adapter layer weights. This creates a dilemma: a researcher might have a high-precision biomedical adapter but only have the VRAM capacity to host an FP8 base model. Currently, there is no standardized way to combine these two without the high cost of merging the adapter with the base model, then re-quantizing the entire system or retraining the adapters to accommodate the FP8 base model's quantization error and preserve performance
+\subsection{The Resource-Efficient Deployment Challenge}
+
+This research grew out of a practical challenge at the Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen (GWDG). The existing Chat AI service already hosts Qwen3-32B-FP8~\cite{yang2025qwen3} on its shared infrastructure for general tasks. Our primary goal was to find a way to integrate specialized agentic biomedical capabilities (Biomni R0-32B)~\cite{biomnir0} into this existing framework without the need to use extra GPUs.
+
+If we simply hosted a separate, full-precision Biomni R0-32B model, it would require 64 GB of VRAM, doubling our infrastructure costs. Alternatively, hosting an FP8-quantized version of the fully fine-tuned BF16 Biomni R0-32B model would still require an additional 32 GB of VRAM. Instead, we sought to exploit vLLM's \cite{kwon2023efficient} multi-adapter capabilities by dynamically loading a LoRA adapter~\cite{hu2021lora} onto the pre-existing FP8 base model. This approach would enable specialized biomedical reasoning through simple endpoint switching, so multiple task-specific variants could share the same underlying GPU resources. At the same time, it would preserve the ability to serve the standard Qwen-32B-FP8 base model \cite{yang2025qwen3} for general-purpose use.
+\section{Problem Statement}
+Broadly, this work asks whether high-precision domain adaptations can be transferred to an FP8-quantized base model without materially degrading performance on domain-specific tasks. This question is especially relevant for biomedical NLP, where models such as Biomni-R0-32B must answer complex queries that require multi-step reasoning, including genetic variant interpretation and GWAS analysis (genome-wide association studies that link genetic variants to diseases or traits). In practice, however, naively applying a BF16 LoRA adapter on top of an FP8 base model raises several challenges, from mixed-precision implementation details to more fundamental concerns about interference in weight space when combining quantized and high-precision updates.
+Specifically, we must investigate whether the noise introduced by the FP8 quantization process will `drown out' or corrupt the specialized biomedical knowledge contained within the LoRA adapter without the need to retrain the adapter. 
+
+\section{Research Questions}
+
+This thesis investigates the following research questions:
+
+\begin{enumerate}
+    \item \textbf{RQ1: Feasibility of Cross-Precision Transfer} \\
+    How much performance can be maintained without retraining when extracted BF16 LoRA adapters from the fine-tuned domain-specific model and the base model are applied to FP8-quantized base models?
+    \item \textbf{RQ2: Orthogonality of Quantization Noise and Semantic Adaptation} \\
+    Do domain-specific knowledge and quantization error noise occupy geometrically orthogonal subspaces in the weight embedding space, preventing substantial mutual interference?
+    \item \textbf{RQ3: Corrective vs. Naive Transfer} \\
+    Is it feasible to design BF16 LoRA adapter with a certain rank that simultaneously mitigates quantization noise from FP8 quantization and encodes domain knowledge without the need to retrain the adapter, or does this dual-objective approach inevitably lead to capacity saturation in representational power for accommodating the noise and representing the domain knowledge?
+    \item \textbf{RQ4: Resource-Efficient Deployment} \\
+    Can cross-precision transfer facilitate the long-term, resource-efficient rollout of specialized LLMs on shared infrastructure without necessitating further hardware investment for specialized agentic models?
+\end{enumerate}
+
+\section{Research Contributions}
+
+This thesis presents three primary contributions to the field of efficient LLM deployment:
+
+\begin{enumerate}
+    \item \textbf{Empirical Validation of the Orthogonality Hypothesis} \\
+    Naive Transfer is proposed as a method to potentially achieve high performance retention, which is aimed to match the full-precision baseline. We analyze the weight-space geometry to determine if a near-zero cosine similarity on average across all layers exists between the extracted BF16 LoRA adapter and the quantization noise vectors. Such result would support the hypothesis that low-rank semantic knowledge is geometrically separated from high-rank quantization noise.     
+    \item \textbf{Comparative Analysis of Transfer Methods} \\
+    We systematically compare three approaches to cross-precision transfer:
+    \begin{itemize}
+        \item \textbf{Method A (Naive Transfer)}: Extracting LoRA from the difference between fine-tuned and base models in BF16, then applying to the FP8 base of the same family of model. This method is evaluated to determine its robustness compared to retraining approaches in which LoRA adapters normally are used to be fine-tuned from scratch.
+        \item \textbf{Method B (Corrective Extraction)}: Extracting LoRA from the difference between fine-tuned BF16 and dequantized FP8 models since the dequantized weights are used during inference of quantized models in production. This method is evaluated to determine if it suffers from quantization noise. 
+        \item \textbf{Method C (Direct Quantization)}: Quantizing the domain-adapted model directly using FP8 with domain-specific calibration data. This serves as our quantized baseline for the comparison.
+    \end{itemize}
+    
+    \item \textbf{Resource-Efficient Deployment Architecture} \\
+    We demonstrate a practical deployment strategy using vLLM's multi-adapter capability. By dynamically loading a LoRA adapter onto an existing generic FP8 base model, agentic biomedical capabilities can be provided without the need for additional GPU resources for hosting. Consequently, this approach would significantly reduce VRAM requirements compared to hosting separate specialized quantized or full-precision models, with efficient endpoint switching between generic and domain-specific model capabilities from the same model family, such as Qwen-32B.
+\end{enumerate}
+\section{Thesis Structure}
+The remainder of this thesis is organized as follows:
+
+\textbf{Chapter 2: Background} \\
+Introduces the challenge of deploying 32B-scale LLMs under memory constraints. Presents LoRA and post-training quantization (FP8, block-wise) as key techniques. Defines the Biomni project and Eval1 benchmark. Introduces the Orthogonality Hypothesis as a theoretical basis for LoRA transfer.
+
+\par\medskip % Adds a nice scientific spacing between entries
+
+\textbf{Chapter 3: Methodology} \\
+Evaluates three LoRA transfer methods: Naive Transfer, Corrective Extraction, and Direct Quantization. Describes the experimental setup using Biomni-R0-32B and Eval1. Details implementation choices (arithmetic, dequantization, vLLM integration) to ensure reproducibility.
+
+\par\medskip
+
+\textbf{Chapter 4: Results} \\
+Presents performance results across Eval1, including task-level breakdowns. Compares methods against Qwen3-32B-BF16 and Biomni-R0-32B-INT8. Analyzes performance vs.\ LoRA rank and evaluates memory footprint.
+
+\par\medskip
+
+\textbf{Chapter 5: Discussion} \\
+Explains limitations of Corrective Extraction due to quantization error. Revisits Naive Transfer via the Orthogonality Hypothesis. Discusses broader implications for efficient, resource-efficient AI deployment.
+
+\par\medskip
+\textbf{Chapter 6: Conclusion} \\
+Summarizes the key findings and the practical impact of cross-precision transfer. Highlights primary contributions, including a recommended deployment workflow and infrastructure sharing strategies. Outlines future research directions such as multi-adapter scenarios, generalization to other quantization formats, and the exploration of higher-rank adapters.
