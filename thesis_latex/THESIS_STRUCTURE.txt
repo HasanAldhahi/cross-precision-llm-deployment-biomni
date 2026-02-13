@@ -1,0 +1,214 @@
+MASTER'S THESIS — REPOSITORY & THESIS STRUCTURE
+================================================
+
+Title:    Optimizing LLM Deployment via Cross-Precision Transfer:
+          A Case Study in Biomedical AI Agent Biomni
+
+Author:   Hasan Marwan Mahmood Aldhahi
+Supervisors: Prof. Julian Kunkel, Dr. Narges Lux
+University: Georg-August-Universität Göttingen (GWDG)
+Date:      Feb 2026
+
+
+================================================================================
+PART 1 — BIOMNI REPOSITORY DIRECTORY TREE
+================================================================================
+
+All paths are relative to the repository root: Biomni/
+
+Biomni/
+├── README.md                           # Main thesis README (methods, results, usage)
+├── license_info.md                     # Data source licenses and commercial use
+│
+├── biomni/                             # Core Biomni agent framework
+│   ├── agent/                          # LangGraph-based agents (c1, d1, e1)
+│   ├── eval/                           # Evaluation utilities
+│   ├── model/                          # Model utilities
+│   ├── task/                           # Task definitions
+│   └── tool/                           # Bioinformatics tool registry, schema_db, tool_description
+│
+├── biomni_env/                         # Environment setup
+│   ├── README.md                       # Installation instructions (see README)
+│   ├── setup.sh                        # Full environment setup (>10 hours)
+│   ├── environment.yml                # Conda environment specification
+│   └── biomni_tools/                  # Pre-installed bioinformatics tools (bwa, fasttree, etc.)
+│
+├── brain_surgery/                      # Methods A & B: LoRA extraction & dequantization
+│   ├── README.md                       # Detailed documentation (see README)
+│   ├── dequantize_FP8/                # FP8 → BF16 dequantization (Method B)
+│   │   ├── dequant_FP8_to_BF16.py     # Main dequantization script
+│   │   └── cpu_autopsy_*.py            # Sanity check on dequantized weights
+│   ├── dequantize_INT4/                # INT4 → BF16 dequantization (exploratory)
+│   │   ├── raw_dequantize_INT4.py     # AWQ INT4 unpacking + BF16 conversion
+│   │   └── generate_plots.py           # Magnitude & orthogonality analysis plots
+│   ├── LoRA_extraction/                # LoRA extraction via MergeKit
+│   │   ├── extract_lora_256.sh        # SLURM batch script for extraction
+│   │   └── sanitize_lora.py            # Sanitize LoRA for vLLM compatibility
+│   ├── model_probing/                  # Weight tensor inspection (check_keys_FP8/INT4)
+│   └── orthogonality_hypothesis/       # Quantization noise orthogonality analysis
+│
+├── quantization/                       # Method C: Direct FP8/INT4 quantization
+│   ├── README.md                       # Detailed documentation (see README)
+│   ├── calibration_data/              # Biomedical calibration (123 samples, stratified Eval1)
+│   │   ├── calibration_data.json      # Final calibration dataset
+│   │   ├── calibration_preview.txt    # Dataset statistics & sample preview
+│   │   ├── Data_r0_annotated_cleaned.jsonl
+│   │   ├── prepare_calibration.py
+│   │   └── clean_calibration_data.py
+│   └── scripts/
+│       ├── FP8_quantization/          # FP8 E4M3 Block-128 (LLM Compressor)
+│       │   ├── quantize_FP8.py
+│       │   └── quanitze_FP8.sh
+│       └── INT4_quantization/          # AWQ INT4 (exploratory)
+│           ├── quantize_AWQ_INT4.py
+│           └── quanitze_INT4.sh
+│
+├── models_and_adapters/                # Quantized models & LoRA adapters (see README)
+│   ├── README.md                       # Registry: HF links, usage, results summary
+│   ├── Biomni-R0-32B-AWQ-INT4-CustomCalib/     # AWQ INT4 quantized model
+│   ├── Biomni-R0-32B-FP8-CustomCalib/          # FP8 quantized model (Method C)
+│   ├── Biomni-R0-32B-From-INT4-Bridge-BF16/    # Dequantized INT4 → BF16 bridge
+│   ├── Qwen3-32B-FP8-to-BF16/                   # Dequantized FP8 → BF16 bridge
+│   └── LoRa_extraction_results/
+│       ├── Method_A_lora_basic_original_base_rank_128/   # Method A, rank 128
+│       ├── Method_A_lora_basic_original_base_rank_256/   # Method A, rank 256 (recommended)
+│       └── Method_B_dequantized_corrected_lora_rank_256/  # Method B, rank 256
+│
+├── server_client_code/                 # Model inference infrastructure
+│   ├── README.md                       # Server setup documentation
+│   ├── LOAD_BALANCER_FIX.md           # Load balancer troubleshooting
+│   ├── run_server.sh                  # vLLM server launch (multi-GPU)
+│   ├── run_client.sh                  # Evaluation client launcher
+│   ├── run_client_Eval1_benchmark.py  # Eval1 benchmark evaluation client
+│   ├── load_balancer.py               # Multi-GPU load balancer
+│   └── diagnose_servers.sh             # Server health diagnostics
+│
+├── thesis_results_final/               # Experimental results (all methods) — see README
+│   ├── README.md                      # Result categories, annotation pipeline, statistics
+│   ├── annotation_pipeline/           # Human/AI annotation tools (1–4 steps)
+│   ├── R0_32B_BF16/                   # Baseline results
+│   ├── Qwen_32B_base_model/           # Qwen3-BF16 reference (no adaptation)
+│   ├── Qwen_FP8_LORA256/              # Method A results
+│   ├── Qwen_FP8_with_LORA_128/        # LoRA-128 variant
+│   ├── Qwen_FP8_with_extracted_dequantized_LORA_rank256/  # Method B results
+│   ├── R0-32B-FP8/                    # Method C results
+│   └── R0_32B_INT8_quantized/          # INT8 quantization (exploratory)
+│
+├── visualization/                      # Result visualization
+│   ├── README.md                      # Visualization documentation
+│   ├── bar_chart.py                   # Per-task accuracy bar chart
+│   ├── heatmap.py                     # Cross-model performance heatmap
+│   ├── bar_chart.png
+│   ├── heatmap.png
+│   └── *.json                         # Statistics data (per method)
+│
+├── logs/                               # Execution logs (reproducibility)
+│   └── README.md                      # Log file documentation
+│
+├── miscellaneous/                      # Supplementary experiments & SFT
+│   ├── R0/                            # Model comparison, fine-tuning, SFT scripts
+│   └── eval_output/                   # Raw evaluation outputs (Thesis_results, etc.)
+│
+└── thesis_latex/                       # LaTeX thesis source (see Part 2 below)
+
+
+================================================================================
+PART 2 — THESIS LaTeX DIRECTORY TREE (thesis_latex/)
+================================================================================
+
+thesis_latex/
+├── main.tex                            # Master LaTeX document
+├── thesis_details.tex                  # Thesis metadata (title, author, university, date)
+├── bibliography.bib                   # BibTeX references
+│
+├── frontmatter/
+│   ├── abstract.tex                   # Abstract
+│   ├── acknowledgements.tex          # Acknowledgements
+│   └── chatgpt_declaration.tex       # Declaration on use of ChatGPT and comparable tools
+│
+├── chapters/
+│   ├── 01_introduction.tex            # Motivation, problem statement, contributions
+│   ├── 02_background.tex              # LLMs, quantization, LoRA, orthogonality hypothesis
+│   ├── 03_methodology.tex             # Three experimental methods (A, B, C)
+│   ├── 05_results.tex                # Performance results, token analysis
+│   ├── 06_discussion.tex              # Why A succeeded, why B failed
+│   └── 07_conclusion.tex             # Summary, impact, future work
+│
+├── images/
+│   ├── GOE_Logo_Quer_IPC_Farbe_RGB(1).png   # University logo
+│   ├── Gwdg-logo-neu.png                    # GWDG logo
+│   ├── bar_chart.png                        # Per-task accuracy (from visualization/)
+│   ├── heatmap.png                          # Cross-model performance heatmap
+│   ├── fig_6_x_magnitude.png                 # Weight magnitude (brain_surgery/dequantize_INT4)
+│   ├── fig_6_y_orthogonality.png             # Orthogonality analysis
+│   └── workflow_graph.pdf / workflow_graph.png
+│
+├── poster/                             # Thesis poster assets (if present)
+│
+├── THESIS_STRUCTURE.txt                # This file
+└── [build artifacts: .aux, .bbl, .log, .pdf, etc.]
+
+
+================================================================================
+PART 3 — KEY RESULTS (aligned with README and thesis_results_final)
+================================================================================
+
+Eval1 benchmark: 433 questions (CRISPR, GWAS, Lab Bench, Patient Gene Detection,
+Rare Disease Diagnosis, Screening Gene Retrieval).
+
+| Model Configuration                    | Method        | Accuracy | Retention | VRAM   |
+|----------------------------------------|---------------|----------|-----------|--------|
+| Biomni-R0-32B (BF16)                   | Baseline      | 44.5%    | 100.0%    | 64.0 GB|
+| Qwen3-FP8 + LoRA 256                   | Method A      | 44.6%    | 100.2%    | 40.0 GB|
+| Qwen3-FP8 + LoRA (Corrective)          | Method B      | 29.5%    | 66.3%     | 40.0 GB|
+| R0-FP8 (Direct Quantization)           | Method C      | 41.4%    | 93.0%     | 32.0 GB|
+| Qwen3-BF16 (No Adaptation)             | Reference     | 22.1%    | 49.7%     | 64.0 GB|
+
+Method A (Naive Transfer):  SUCCESS — statistical parity with baseline; ~37.5% memory reduction.
+Method B (Corrective):      FAILURE — rank-limited adapter cannot capture quantization noise.
+Method C (Direct Quant):    Partial success — good performance, slight loss vs baseline.
+
+Memory reduction (Method A): 64 GB → 40 GB. Orthogonality: cosine similarity ≈ -0.00001
+between LoRA adapter and quantization noise (see README, brain_surgery/README).
+
+
+================================================================================
+PART 4 — README FILES (where to find documentation)
+================================================================================
+
+- Biomni/README.md                 — Overview, methodology, results table, repo structure, installation, usage
+- biomni_env/README.md            — Conda/environment setup
+- brain_surgery/README.md         — Methods A & B, dequantization, LoRA extraction, orthogonality
+- quantization/README.md         — Method C, calibration data, FP8/INT4 scripts
+- models_and_adapters/README.md   — All models & adapters, HuggingFace links, usage examples
+- server_client_code/README.md    — vLLM server and evaluation setup
+- thesis_results_final/README.md — Result directories, annotation pipeline, statistics format
+- visualization/README.md        — Heatmap and bar chart generation
+- logs/README.md                  — Log file index for reproducibility
+
+
+================================================================================
+COMPILATION (thesis_latex)
+================================================================================
+
+  pdflatex main.tex
+  biber main
+  pdflatex main.tex
+  pdflatex main.tex
+
+Or:  latexmk -pdf -bibtex main.tex
+
+
+================================================================================
+CHAPTER HIGHLIGHTS (thesis narrative)
+================================================================================
+
+Ch 1 — Introduction:     Motivation, problem statement, contributions
+Ch 2 — Background:       LLMs, quantization, LoRA, orthogonality hypothesis
+Ch 3 — Methodology:      Three methods (A: naive transfer, B: corrective, C: direct quant)
+Ch 5 — Results:          Performance tables, token analysis, figures
+Ch 6 — Discussion:       Why A succeeded, why B failed
+Ch 7 — Conclusion:       Summary, impact, future work
+
+The thesis tells a complete story from problem to solution with theoretical
+grounding (orthogonality hypothesis) and empirical validation on Eval1.
